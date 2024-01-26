@@ -9,6 +9,7 @@ import (
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/xedom/codeduel-lobby/types"
 )
 
 var lobbies = make(map[string]*Lobby)
@@ -32,6 +33,29 @@ func main() {
 		}
 
 		// fmt.Printf("Current lobbies: %v\n", lobbies)
+		if len(lobby.clients) >= lobby.maxPlayers {
+			fmt.Printf("Lobby %s is full\n", lobbyTab)
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+
+		if lobby.status != types.STARTING {
+			fmt.Printf("Lobby %s is not in starting state\n", lobbyTab)
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+
+		if lobby.isLocked { // TODO: add password check
+			fmt.Printf("Lobby %s is locked\n", lobbyTab)
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+
+		if lobby.endTimestamp != 0 && lobby.endTimestamp < int(time.Now().Unix()) {
+			fmt.Printf("Time is up for lobby %s\n", lobbyTab)
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
 
 		err := serveWs(lobby, w, r, lobbyTab)
 		if err != nil {
@@ -41,7 +65,7 @@ func main() {
 		for currLobbyTag, currentLobbyRef := range lobbies {
 			fmt.Printf("Lobby %s:\n", currLobbyTag)
 			for client, ok := range currentLobbyRef.clients {
-				fmt.Printf("Clien %s: %s - %v\n", client.ID, client.Token, ok)
+				fmt.Printf("Clien %s: %s (owner %v) - %v\n", client.ID, client.Token, client.Owner, ok)
 			}
 		}
 

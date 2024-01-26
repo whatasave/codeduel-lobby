@@ -20,7 +20,8 @@ type Settings struct {
 	AllowedLangs []string `json:"allowedLangs"`
 }
 type ClientMessage struct {
-	Status   string   `json:"status"`
-	Code     string   `json:"code"`
-	Settings Settings `json:"settings"`
+	Status     string   `json:"status"`
+	StartLobby bool     `json:"startLobby"`
+	Code       string   `json:"code"`
+	Settings   Settings `json:"settings"`
 }

@@ -27,6 +27,7 @@ type Client struct {
 	hub *Lobby
 
 	ID     string `json:"id"`
+	Owner  bool   `json:"owner"`
 	Token  string `json:"token"`
 	Status string `json:"status"`
 	Code   string `json:"code"`
@@ -64,12 +65,14 @@ func (c *Client) read() {
 			break
 		}
 
+		fmt.Printf("[CLIENT: %s] %s\n", c.ID, message)
+
 		parsedMsg, err := utils.PaserseMessage(message)
 		fmt.Printf("Parsed message: %v\n", parsedMsg)
+		handleUserMessage(c, parsedMsg)
 
-		fmt.Printf("[CLIENT: %s] %s\n", c.ID, message)
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
-		c.hub.broadcast <- message
+		// c.hub.broadcast <- message
 	}
 }
 
@@ -125,10 +128,13 @@ func serveWs(hub *Lobby, w http.ResponseWriter, r *http.Request, lobby string) e
 	token := cookie.Value
 	fmt.Printf("Token: %s\n", token)
 
+	isLobbyEmpty := len(hub.clients) == 0
+
 	client := &Client{
 		hub: hub,
 
 		ID:     RandomID(),
+		Owner:  isLobbyEmpty,
 		Token:  token,
 		Status: types.NOT_READY,
 		Code:   lobby,
@@ -150,4 +156,76 @@ func RandomID() string {
 	hash := md5.Sum([]byte(str))
 	hashStr := hex.EncodeToString(hash[:])
 	return hashStr[:8]
+}
+
+func handleUserMessage(c *Client, message types.ClientMessage) {
+	fmt.Printf("Handling message: %v\n", message)
+	c.SetStatus(message.Status)
+	c.SetLobbySettings(message.Settings)
+	c.StartLobby(message.StartLobby)
+}
+
+func (c *Client) SetStatus(status string) {
+	fmt.Printf("Setting status to %s\n", status)
+	if c.Status == status {
+		return
+	}
+	if status != types.READY && status != types.NOT_READY && status != types.DONE {
+		return
+	} // TODO: find a better way to do this
+
+	// if the client is in a match, he can only set his status to DONE
+	if c.Status == types.IN_MATCH && status != types.DONE {
+		return
+	}
+
+	c.Status = status
+	c.hub.broadcast <- []byte(fmt.Sprintf("User %s is %s", c.Token, status)) // TODO: send a better message to the clients
+}
+
+func (c *Client) SetLobbySettings(settings types.Settings) {
+	fmt.Printf("Setting lobby settings: %v\n", settings)
+	if !c.Owner {
+		return
+	}
+	fmt.Printf("Owner: %v\n", c.Owner)
+	if c.hub.status != types.STARTING {
+		return
+	}
+	fmt.Printf("Status: %s\n", c.hub.status)
+
+	c.hub.isLocked = settings.LockLobby
+
+	if settings.MaxPlayers > 0 && settings.MaxPlayers >= len(c.hub.clients) {
+		c.hub.maxPlayers = settings.MaxPlayers
+	}
+	if settings.MaxDuration > 0 {
+		c.hub.maxDuration = settings.MaxDuration
+	}
+	if settings.AllowedLangs != nil && len(settings.AllowedLangs) > 0 {
+		c.hub.allowedLangs = settings.AllowedLangs
+	}
+
+	c.hub.broadcast <- []byte(fmt.Sprintf("Lobby settings changed for lobby: isLocked %v, maxPlayers %d, maxDuration %d, allowedLangs %v", c.hub.isLocked, c.hub.maxPlayers, c.hub.maxDuration, c.hub.allowedLangs)) // TODO: send a better message to the clients
+}
+
+func (c *Client) StartLobby(start bool) {
+	fmt.Printf("Starting lobby: %v\n", start)
+	if !c.Owner {
+		return
+	}
+	if c.hub.status != types.STARTING {
+		return
+	}
+	for client := range c.hub.clients {
+		if client.Status != types.READY {
+			c.hub.broadcast <- []byte(fmt.Sprintf("Lobby cannot start because all players must be ready"))
+			return
+		}
+	}
+
+	if start {
+		fmt.Printf("About to start lobby\n")
+		c.hub.StartMatch()
+	}
 }

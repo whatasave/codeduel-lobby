@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/xedom/codeduel-lobby/types"
 )
 
@@ -12,11 +15,14 @@ type Lobby struct {
 	unregister chan *Client
 
 	status       string
+	password     string
 	isLocked     bool
 	maxPlayers   int
 	maxDuration  int
 	endTimestamp int
 	allowedLangs []string
+
+	allowedPlayers []string
 }
 
 func newLobby() *Lobby {
@@ -58,4 +64,18 @@ func (h *Lobby) run() {
 			}
 		}
 	}
+}
+
+func (h *Lobby) StartMatch() {
+	h.status = types.ONGOING
+	h.endTimestamp = int(time.Now().Unix()) + h.maxDuration
+	allowedPlayers := make([]string, 0)
+	for client := range h.clients {
+		if client.Status == types.READY {
+			allowedPlayers = append(allowedPlayers, client.Token)
+		}
+	}
+	h.allowedPlayers = allowedPlayers
+
+	h.broadcast <- []byte(fmt.Sprintf("Match started: Lobby Settings {isLocked: %v, maxPlayers: %d, maxDuration: %d, allowedLangs: %v} - Allowed players: %v", h.isLocked, h.maxPlayers, h.maxDuration, h.allowedLangs, h.allowedPlayers)) // TODO: send a better message to the clients
 }
