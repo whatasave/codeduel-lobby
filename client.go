@@ -32,7 +32,7 @@ var upgrader = websocket.Upgrader{
 }
 
 type Client struct {
-	hub *Hub
+	hub *Lobby
 
 	ID	 string `json:"id"`
 	conn *websocket.Conn
@@ -101,7 +101,7 @@ func (c *Client) write() {
 	}
 }
 
-func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) error {
+func serveWs(hub *Lobby, w http.ResponseWriter, r *http.Request, lobby string) error {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil { return err }
 	client := &Client{

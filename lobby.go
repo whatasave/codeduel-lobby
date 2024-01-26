@@ -1,6 +1,6 @@
 package main
 
-type Hub struct {
+type Lobby struct {
 	clients map[*Client]bool
 
 	broadcast chan []byte
@@ -8,8 +8,8 @@ type Hub struct {
 	unregister chan *Client
 }
 
-func newHub() *Hub {
-	return &Hub{
+func newLobby() *Lobby {
+	return &Lobby{
 		broadcast:  make(chan []byte),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
@@ -17,7 +17,7 @@ func newHub() *Hub {
 	}
 }
 
-func (h *Hub) run() {
+func (h *Lobby) run() {
 	for {
 		select {
 		case client := <-h.register:
