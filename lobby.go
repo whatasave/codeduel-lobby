@@ -73,6 +73,7 @@ func (h *Lobby) StartMatch() {
 	for client := range h.clients {
 		if client.Status == types.READY {
 			allowedPlayers = append(allowedPlayers, client.Token)
+			client.Status = types.IN_MATCH
 		}
 	}
 	h.allowedPlayers = allowedPlayers

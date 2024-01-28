@@ -62,10 +62,10 @@ func main() {
 			log.Println(err)
 		}
 
-		for currLobbyTag, currentLobbyRef := range lobbies {
-			fmt.Printf("Lobby %s:\n", currLobbyTag)
+		for currentLobbyTag, currentLobbyRef := range lobbies {
+			fmt.Printf("Lobby %s:\n", currentLobbyTag)
 			for client, ok := range currentLobbyRef.clients {
-				fmt.Printf("Clien %s: %s (owner %v) - %v\n", client.ID, client.Token, client.Owner, ok)
+				fmt.Printf("Client %s: %s (owner %v) - %v\n", client.ID, client.Token, client.Owner, ok)
 			}
 		}
 

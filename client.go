@@ -24,7 +24,7 @@ const (
 )
 
 type Client struct {
-	hub *Lobby
+	lobby *Lobby
 
 	ID     string `json:"id"`
 	Owner  bool   `json:"owner"`
@@ -48,7 +48,7 @@ var upgrader = websocket.Upgrader{
 
 func (c *Client) read() {
 	defer func() {
-		c.hub.unregister <- c
+		c.lobby.unregister <- c
 		c.conn.Close()
 	}()
 	c.conn.SetReadLimit(maxMessageSize)
@@ -65,11 +65,31 @@ func (c *Client) read() {
 			break
 		}
 
-		fmt.Printf("[CLIENT: %s] %s\n", c.ID, message)
+		// fmt.Printf("[CLIENT: %s] %s\n", c.ID, message)
 
-		parsedMsg, err := utils.PaserseMessage(message)
-		fmt.Printf("Parsed message: %v\n", parsedMsg)
-		handleUserMessage(c, parsedMsg)
+		parsedMsg, err := utils.ParseMessage(message)
+		if (err != nil) {
+			fmt.Printf("Error parsing message: %v\n", err)
+			continue
+		}
+		// fmt.Printf("Parsed message: %v\n", parsedMsg)
+		// handleUserMessage(c, parsedMsg)
+
+		fmt.Printf("msg type: %T\n", parsedMsg)
+		switch parsedMsg.(type) {
+		case *types.SettingsPacketIn:
+			settings := *parsedMsg.(*types.SettingsPacketIn)
+			fmt.Printf("test: %v\n", settings.LockLobby)
+			c.SetLobbySettings(settings)
+		case *types.PlayerStatusPacketIn:
+			status := *parsedMsg.(*types.PlayerStatusPacketIn)
+			c.SetStatus(status.Status)
+		case *types.StartLobbyPacketIn:
+			start := *parsedMsg.(*types.StartLobbyPacketIn)
+			c.StartLobby(start.Start)
+		default:
+			fmt.Printf("Unknown message type: %v\n", parsedMsg)
+		}
 
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
 		// c.hub.broadcast <- message
@@ -115,6 +135,75 @@ func (c *Client) write() {
 	}
 }
 
+func (c *Client) SetStatus(status string) {
+	fmt.Printf("Setting status to %s\n", status)
+	if c.Status == status {
+		return
+	}
+
+	if status != types.READY && status != types.NOT_READY && status != types.DONE {
+		return
+	} // TODO: find a better way to do this
+
+	// if the client is in a match, he can only set his status to DONE
+	if c.Status == types.IN_MATCH && status != types.DONE {
+		return
+	}
+
+	if c.Status == types.DONE {
+		return
+	}
+
+	c.Status = status
+	c.lobby.broadcast <- []byte(fmt.Sprintf("User %s is %s", c.Token, status)) // TODO: send a better message to the clients
+}
+
+func (c *Client) SetLobbySettings(settings types.SettingsPacketIn) {
+	fmt.Printf("Setting lobby settings: %v\n", settings)
+	if !c.Owner {
+		return
+	}
+	fmt.Printf("Owner: %v\n", c.Owner)
+	if c.lobby.status != types.STARTING {
+		return
+	}
+
+	c.lobby.isLocked = settings.LockLobby
+
+	if settings.MaxPlayers > 0 && settings.MaxPlayers >= len(c.lobby.clients) {
+		c.lobby.maxPlayers = settings.MaxPlayers
+	}
+	if settings.MaxDuration > 0 {
+		c.lobby.maxDuration = settings.MaxDuration
+	}
+	if settings.AllowedLangs != nil && len(settings.AllowedLangs) > 0 {
+		c.lobby.allowedLangs = settings.AllowedLangs
+	}
+
+	c.lobby.broadcast <- []byte(fmt.Sprintf("Lobby settings changed for lobby: isLocked %v, maxPlayers %d, maxDuration %d, allowedLangs %v", c.lobby.isLocked, c.lobby.maxPlayers, c.lobby.maxDuration, c.lobby.allowedLangs)) // TODO: send a better message to the clients
+}
+
+func (c *Client) StartLobby(start bool) {
+	fmt.Printf("Starting lobby: %v\n", start)
+	if !c.Owner {
+		return
+	}
+	if c.lobby.status != types.STARTING {
+		return
+	}
+	for client := range c.lobby.clients {
+		if client.Status != types.READY {
+			c.lobby.broadcast <- []byte(fmt.Sprintf("Lobby cannot start because all players must be ready"))
+			return
+		}
+	}
+
+	if start {
+		fmt.Printf("About to start lobby\n")
+		c.lobby.StartMatch()
+	}
+}
+
 func serveWs(hub *Lobby, w http.ResponseWriter, r *http.Request, lobby string) error {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -131,7 +220,7 @@ func serveWs(hub *Lobby, w http.ResponseWriter, r *http.Request, lobby string) e
 	isLobbyEmpty := len(hub.clients) == 0
 
 	client := &Client{
-		hub: hub,
+		lobby: hub,
 
 		ID:     RandomID(),
 		Owner:  isLobbyEmpty,
@@ -142,7 +231,7 @@ func serveWs(hub *Lobby, w http.ResponseWriter, r *http.Request, lobby string) e
 		conn: conn,
 		send: make(chan []byte, 256),
 	}
-	client.hub.register <- client
+	client.lobby.register <- client
 
 	go client.write()
 	go client.read()
@@ -156,76 +245,4 @@ func RandomID() string {
 	hash := md5.Sum([]byte(str))
 	hashStr := hex.EncodeToString(hash[:])
 	return hashStr[:8]
-}
-
-func handleUserMessage(c *Client, message types.ClientMessage) {
-	fmt.Printf("Handling message: %v\n", message)
-	c.SetStatus(message.Status)
-	c.SetLobbySettings(message.Settings)
-	c.StartLobby(message.StartLobby)
-}
-
-func (c *Client) SetStatus(status string) {
-	fmt.Printf("Setting status to %s\n", status)
-	if c.Status == status {
-		return
-	}
-	if status != types.READY && status != types.NOT_READY && status != types.DONE {
-		return
-	} // TODO: find a better way to do this
-
-	// if the client is in a match, he can only set his status to DONE
-	if c.Status == types.IN_MATCH && status != types.DONE {
-		return
-	}
-
-	c.Status = status
-	c.hub.broadcast <- []byte(fmt.Sprintf("User %s is %s", c.Token, status)) // TODO: send a better message to the clients
-}
-
-func (c *Client) SetLobbySettings(settings types.Settings) {
-	fmt.Printf("Setting lobby settings: %v\n", settings)
-	if !c.Owner {
-		return
-	}
-	fmt.Printf("Owner: %v\n", c.Owner)
-	if c.hub.status != types.STARTING {
-		return
-	}
-	fmt.Printf("Status: %s\n", c.hub.status)
-
-	c.hub.isLocked = settings.LockLobby
-
-	if settings.MaxPlayers > 0 && settings.MaxPlayers >= len(c.hub.clients) {
-		c.hub.maxPlayers = settings.MaxPlayers
-	}
-	if settings.MaxDuration > 0 {
-		c.hub.maxDuration = settings.MaxDuration
-	}
-	if settings.AllowedLangs != nil && len(settings.AllowedLangs) > 0 {
-		c.hub.allowedLangs = settings.AllowedLangs
-	}
-
-	c.hub.broadcast <- []byte(fmt.Sprintf("Lobby settings changed for lobby: isLocked %v, maxPlayers %d, maxDuration %d, allowedLangs %v", c.hub.isLocked, c.hub.maxPlayers, c.hub.maxDuration, c.hub.allowedLangs)) // TODO: send a better message to the clients
-}
-
-func (c *Client) StartLobby(start bool) {
-	fmt.Printf("Starting lobby: %v\n", start)
-	if !c.Owner {
-		return
-	}
-	if c.hub.status != types.STARTING {
-		return
-	}
-	for client := range c.hub.clients {
-		if client.Status != types.READY {
-			c.hub.broadcast <- []byte(fmt.Sprintf("Lobby cannot start because all players must be ready"))
-			return
-		}
-	}
-
-	if start {
-		fmt.Printf("About to start lobby\n")
-		c.hub.StartMatch()
-	}
 }
