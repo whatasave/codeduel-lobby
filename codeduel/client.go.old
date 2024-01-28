@@ -1,4 +1,4 @@
-package main
+package codeduel
 
 import (
 	"bytes"
@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/xedom/codeduel-lobby/types"
-	"github.com/xedom/codeduel-lobby/utils"
+	"github.com/xedom/codeduel-lobby/codeduel/packets"
+	"github.com/xedom/codeduel-lobby/codeduel/types"
 )
 
 const (
@@ -67,28 +67,29 @@ func (c *Client) read() {
 
 		// fmt.Printf("[CLIENT: %s] %s\n", c.ID, message)
 
-		parsedMsg, err := utils.ParseMessage(message)
-		if (err != nil) {
+		var packet any
+		err = packets.UnmarshalPacket(message, &packet)
+		if err != nil {
 			fmt.Printf("Error parsing message: %v\n", err)
 			continue
 		}
 		// fmt.Printf("Parsed message: %v\n", parsedMsg)
 		// handleUserMessage(c, parsedMsg)
 
-		fmt.Printf("msg type: %T\n", parsedMsg)
-		switch parsedMsg.(type) {
-		case *types.SettingsPacketIn:
-			settings := *parsedMsg.(*types.SettingsPacketIn)
+		fmt.Printf("msg type: %T\n", packet)
+		switch packet.(type) {
+		case packets.SettingsPacketIn:
+			settings := packet.(packets.SettingsPacketIn)
 			fmt.Printf("test: %v\n", settings.LockLobby)
 			c.SetLobbySettings(settings)
-		case *types.PlayerStatusPacketIn:
-			status := *parsedMsg.(*types.PlayerStatusPacketIn)
+		case packets.PlayerStatusPacketIn:
+			status := packet.(packets.PlayerStatusPacketIn)
 			c.SetStatus(status.Status)
-		case *types.StartLobbyPacketIn:
-			start := *parsedMsg.(*types.StartLobbyPacketIn)
+		case packets.StartLobbyPacketIn:
+			start := packet.(packets.StartLobbyPacketIn)
 			c.StartLobby(start.Start)
 		default:
-			fmt.Printf("Unknown message type: %v\n", parsedMsg)
+			fmt.Printf("Unknown message type: %v\n", packet)
 		}
 
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
@@ -158,7 +159,7 @@ func (c *Client) SetStatus(status string) {
 	c.lobby.broadcast <- []byte(fmt.Sprintf("User %s is %s", c.Token, status)) // TODO: send a better message to the clients
 }
 
-func (c *Client) SetLobbySettings(settings types.SettingsPacketIn) {
+func (c *Client) SetLobbySettings(settings packets.SettingsPacketIn) {
 	fmt.Printf("Setting lobby settings: %v\n", settings)
 	if !c.Owner {
 		return
