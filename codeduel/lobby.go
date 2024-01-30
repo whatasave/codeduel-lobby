@@ -1,11 +1,17 @@
 package codeduel
 
-import "time"
+import (
+	"fmt"
+	"time"
+
+	"github.com/xedom/codeduel-lobby/codeduel/utils"
+)
 
 type Lobby struct {
 	Owner    *User
-	Users    []*User
+	Users    map[UserId]*User
 	Settings Settings
+	State    any
 }
 
 type Settings struct {
@@ -14,14 +20,21 @@ type Settings struct {
 	AllowedLanguages []string      `json:"allowed_languages"`
 }
 
+type PreLobbyState struct {
+	Ready []UserId
+}
+
 func NewLobby(owner *User) Lobby {
 	return Lobby{
 		Owner: owner,
-		Users: []*User{owner},
+		Users: map[UserId]*User{owner.Id: owner},
 		Settings: Settings{
 			MaxPlayers:       8,
 			GameDuration:     time.Minute * 15,
 			AllowedLanguages: []string{"typescript", "python"},
+		},
+		State: PreLobbyState{
+			Ready: []UserId{},
 		},
 	}
 }
@@ -31,9 +44,24 @@ func (lobby *Lobby) CanJoin(user *User) bool {
 }
 
 func (lobby *Lobby) AddUser(user *User) {
-	lobby.Users = append(lobby.Users, user)
+	lobby.Users[user.Id] = user
 }
 
 func (lobby *Lobby) SetSettings(settings Settings) {
 	lobby.Settings = settings
+}
+
+func (lobby *Lobby) SetState(user *User, state string) error {
+	if lobbyState, ok := lobby.State.(PreLobbyState); !ok {
+		if state == StatusReady {
+			lobbyState.Ready = append(lobbyState.Ready, user.Id)
+		} else if state == StatusNotReady {
+			lobbyState.Ready = utils.Remove(lobbyState.Ready, user.Id)
+		} else {
+			return fmt.Errorf("Unknown user state: %v", state)
+		}
+		return nil
+	} else {
+		return fmt.Errorf("Lobby is not in PreLobby")
+	}
 }

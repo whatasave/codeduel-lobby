@@ -58,8 +58,6 @@ func handlePacket(packet any, lobby *Lobby, user *User) {
 		handlePacketUserStatus(packet.(PacketInUserStatus), lobby, user)
 	case PacketInStartLobby:
 		handlePacketStartLobby(packet.(PacketInStartLobby), lobby, user)
-	default:
-		log.Printf("received unknown packet: %v\n", packet)
 	}
 }
 
@@ -68,7 +66,10 @@ func handlePacketSettings(packet PacketInSettings, lobby *Lobby, user *User) {
 }
 
 func handlePacketUserStatus(packet PacketInUserStatus, lobby *Lobby, user *User) {
-	// TODO
+	err := lobby.SetState(user, packet.Status)
+	if err != nil {
+		log.Printf("error while setting user state: %v\n", err)
+	}
 }
 
 func handlePacketStartLobby(packet PacketInStartLobby, lobby *Lobby, user *User) {

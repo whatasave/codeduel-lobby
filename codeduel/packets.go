@@ -5,6 +5,11 @@ import (
 	"fmt"
 )
 
+const (
+	StatusReady    = "ready"
+	StatusNotReady = "not_ready"
+)
+
 type PacketInSettings struct {
 	Settings Settings
 }
