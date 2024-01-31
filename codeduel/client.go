@@ -34,6 +34,7 @@ func handleClient(connection *websocket.Conn, lobby *Lobby, user *User) {
 	connection.SetReadLimit(maxMessageSize)
 	connection.SetReadDeadline(time.Now().Add(pongWait))
 	connection.SetPongHandler(func(string) error { connection.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+	user.Connection = connection
 	for {
 		_, bytes, err := connection.ReadMessage()
 		if err != nil {
@@ -73,5 +74,12 @@ func handlePacketUserStatus(packet PacketInUserStatus, lobby *Lobby, user *User)
 }
 
 func handlePacketStartLobby(packet PacketInStartLobby, lobby *Lobby, user *User) {
-	// TODO
+	if lobby.Owner.Id != user.Id {
+		log.Printf("user %v is not the owner of the lobby\n", user)
+		return
+	}
+	err := lobby.Start()
+	if err != nil {
+		log.Printf("error while starting lobby: %v\n", err)
+	}
 }

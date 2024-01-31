@@ -10,12 +10,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	"github.com/gorilla/websocket"
 	"github.com/xedom/codeduel-lobby/codeduel"
 )
 
 var lobbies = make(map[string]*codeduel.Lobby)
-var connections = make(map[*codeduel.UserId]*websocket.Conn)
 
 var addr = flag.String("addr", ":8080", "http service address")
 
@@ -53,12 +51,11 @@ func createLobby(response http.ResponseWriter, request *http.Request) {
 	lobbyId := uuid.NewString()
 	lobby := codeduel.NewLobby(user)
 	lobbies[lobbyId] = &lobby
-	connection, err := codeduel.StartWebSocket(response, request, &lobby, user)
+	_, err := codeduel.StartWebSocket(response, request, &lobby, user)
 	if err != nil {
 		response.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	connections[&user.Id] = connection
 }
 
 func joinLobby(response http.ResponseWriter, request *http.Request) {
@@ -73,17 +70,41 @@ func joinLobby(response http.ResponseWriter, request *http.Request) {
 		response.WriteHeader(http.StatusNotFound)
 		return
 	}
-	if !lobby.CanJoin(user) {
+	if err := lobby.CannotJoin(user); err != nil {
 		response.WriteHeader(http.StatusForbidden)
 		return
 	}
 	lobby.AddUser(user)
-	connection, err := codeduel.StartWebSocket(response, request, lobby, user)
+	_, err := codeduel.StartWebSocket(response, request, lobby, user)
 	if err != nil {
 		response.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	connections[&user.Id] = connection
+}
+
+func connectLobby(response http.ResponseWriter, request *http.Request) {
+	user := GetUser(request)
+	if user == nil {
+		response.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	lobbyId := mux.Vars(request)["lobby"]
+	lobby, ok := lobbies[lobbyId]
+	if !ok {
+		response.WriteHeader(http.StatusNotFound)
+		return
+	}
+	if user := lobby.GetUser(user); user == nil {
+		response.WriteHeader(http.StatusForbidden)
+		return
+	}
+	connection, err := codeduel.StartWebSocket(response, request, lobby, user)
+	if err != nil {
+		response.WriteHeader(http.StatusInternalServerError)
+		return
+	} else {
+		user.Connection = connection
+	}
 }
 
 func GetUser(request *http.Request) *codeduel.User {
