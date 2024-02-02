@@ -35,13 +35,14 @@ func handleClient(connection *websocket.Conn, lobby *Lobby, user *User) {
 	connection.SetReadDeadline(time.Now().Add(pongWait))
 	connection.SetPongHandler(func(string) error { connection.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	user.Connection = connection
+	SendPacket(connection, PacketOutLobby{
+		Settings: lobby.Settings,
+		Users:    lobby.Users,
+		State:    lobby.State,
+	})
 	for {
-		_, bytes, err := connection.ReadMessage()
-		if err != nil {
-			return
-		}
 		var packet any
-		err = UnmarshalPacket(bytes, &packet)
+		err := ReadPacket(connection, &packet)
 		if err != nil {
 			log.Printf("error while parsing packet: %v\n", err)
 			continue

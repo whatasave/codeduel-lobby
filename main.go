@@ -24,6 +24,7 @@ func main() {
 	router := mux.NewRouter()
 	router.HandleFunc("/create", createLobby)
 	router.HandleFunc("/join/{lobby}", joinLobby)
+	router.HandleFunc("/connect/{lobby}", connectLobby)
 
 	server := &http.Server{
 		Addr:              *addr,

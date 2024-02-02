@@ -3,24 +3,9 @@ package codeduel
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/gorilla/websocket"
 )
-
-const (
-	StatusReady    = "ready"
-	StatusNotReady = "not_ready"
-)
-
-type PacketInSettings struct {
-	Settings Settings
-}
-
-type PacketInUserStatus struct {
-	Status string `json:"status"`
-}
-
-type PacketInStartLobby struct {
-	Start bool `json:"start"`
-}
 
 func UnmarshalPacket(message []byte, v any) error {
 	var packetType struct {
@@ -48,4 +33,61 @@ func UnmarshalPacket(message []byte, v any) error {
 	}
 
 	return nil
+}
+
+func MarshalPacket(packet any) (any, error) {
+	var packetType string
+	switch packet.(type) {
+	case PacketOutLobby:
+		packetType = "lobby"
+	default:
+		return nil, fmt.Errorf("Unknown packet: %T", packet)
+	}
+	type PacketOut any
+	return struct {
+		Type string `json:"type"`
+		PacketOut
+	}{
+		Type:      packetType,
+		PacketOut: PacketOut(packet),
+	}, nil
+}
+
+func ReadPacket(connection *websocket.Conn, packet any) error {
+	_, bytes, err := connection.ReadMessage()
+	if err != nil {
+		return err
+	}
+	return UnmarshalPacket(bytes, packet)
+}
+
+func SendPacket(connection *websocket.Conn, packet any) error {
+	packet, err := MarshalPacket(packet)
+	if err != nil {
+		return err
+	}
+	return connection.WriteJSON(packet)
+}
+
+const (
+	StatusReady    = "ready"
+	StatusNotReady = "not_ready"
+)
+
+type PacketInSettings struct {
+	Settings Settings
+}
+
+type PacketInUserStatus struct {
+	Status string `json:"status"`
+}
+
+type PacketInStartLobby struct {
+	Start bool `json:"start"`
+}
+
+type PacketOutLobby struct {
+	Settings Settings         `json:"settings"`
+	Users    map[UserId]*User `json:"users"`
+	State    any              `json:"state"`
 }
