@@ -9,6 +9,13 @@ import (
 )
 
 const (
+	InternalServerError = 1011
+	Unauthorized        = 4401
+	Forbidden           = 4403
+	NotFound            = 4404
+)
+
+const (
 	writeWait      = 10 * time.Second    // Time allowed to write a message to the peer.
 	pongWait       = 60 * time.Second    // Time allowed to read the next pong message from the peer.
 	pingPeriod     = (pongWait * 9) / 10 // Send pings to peer with this period. Must be less than pongWait.
@@ -19,6 +26,18 @@ var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	CheckOrigin:     func(r *http.Request) bool { return true },
+}
+
+func RejectConnection(response http.ResponseWriter, request *http.Request, code int, message string) error {
+	connection, err := upgrader.Upgrade(response, request, nil)
+	if err != nil {
+		return err
+	}
+	closeMessage := websocket.FormatCloseMessage(code, message)
+	if err := connection.WriteMessage(websocket.CloseMessage, closeMessage); err != nil {
+		return err
+	}
+	return connection.Close()
 }
 
 func StartWebSocket(response http.ResponseWriter, request *http.Request, lobby *Lobby, user *User) (*websocket.Conn, error) {

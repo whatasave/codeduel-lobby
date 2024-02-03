@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"log"
 	"net/http"
@@ -44,25 +45,25 @@ func main() {
 }
 
 func createLobby(response http.ResponseWriter, request *http.Request) {
-	user := GetUser(request)
-	if user == nil {
-		response.WriteHeader(http.StatusUnauthorized)
+	user, err := GetUser(request)
+	if err != nil {
+		codeduel.RejectConnection(response, request, codeduel.Unauthorized, err.Error())
 		return
 	}
 	lobbyId := uuid.NewString()
 	lobby := codeduel.NewLobby(user)
 	lobbies[lobbyId] = &lobby
-	_, err := codeduel.StartWebSocket(response, request, &lobby, user)
+	_, err = codeduel.StartWebSocket(response, request, &lobby, user)
 	if err != nil {
-		response.WriteHeader(http.StatusInternalServerError)
+		codeduel.RejectConnection(response, request, codeduel.InternalServerError, "cannot start websocket connection")
 		return
 	}
 }
 
 func joinLobby(response http.ResponseWriter, request *http.Request) {
-	user := GetUser(request)
-	if user == nil {
-		response.WriteHeader(http.StatusUnauthorized)
+	user, err := GetUser(request)
+	if err != nil {
+		codeduel.RejectConnection(response, request, codeduel.Unauthorized, err.Error())
 		return
 	}
 	lobbyId := mux.Vars(request)["lobby"]
@@ -76,49 +77,49 @@ func joinLobby(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 	lobby.AddUser(user)
-	_, err := codeduel.StartWebSocket(response, request, lobby, user)
+	_, err = codeduel.StartWebSocket(response, request, lobby, user)
 	if err != nil {
-		response.WriteHeader(http.StatusInternalServerError)
+		codeduel.RejectConnection(response, request, codeduel.InternalServerError, "cannot start websocket connection")
 		return
 	}
 }
 
 func connectLobby(response http.ResponseWriter, request *http.Request) {
-	user := GetUser(request)
-	if user == nil {
-		response.WriteHeader(http.StatusUnauthorized)
+	user, err := GetUser(request)
+	if err != nil {
+		codeduel.RejectConnection(response, request, codeduel.Unauthorized, err.Error())
 		return
 	}
 	lobbyId := mux.Vars(request)["lobby"]
 	lobby, ok := lobbies[lobbyId]
 	if !ok {
-		response.WriteHeader(http.StatusNotFound)
+		codeduel.RejectConnection(response, request, codeduel.NotFound, "lobby not found")
 		return
 	}
 	if user := lobby.GetUser(user); user == nil {
-		response.WriteHeader(http.StatusForbidden)
+		codeduel.RejectConnection(response, request, codeduel.Forbidden, "user not in lobby")
 		return
 	}
 	connection, err := codeduel.StartWebSocket(response, request, lobby, user)
 	if err != nil {
-		response.WriteHeader(http.StatusInternalServerError)
+		codeduel.RejectConnection(response, request, codeduel.InternalServerError, "cannot start websocket connection")
 		return
 	} else {
 		user.Connection = connection
 	}
 }
 
-func GetUser(request *http.Request) *codeduel.User {
+func GetUser(request *http.Request) (*codeduel.User, error) {
 	cookie, err := request.Cookie("jwt")
 	if err != nil {
-		return nil
+		return nil, errors.New("missing jwt cookie")
 	}
 	// TODO: validate jwt calling codeduel-be
 	id, err := strconv.Atoi(cookie.Value)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	return &codeduel.User{
 		Id: codeduel.UserId(id),
-	}
+	}, nil
 }
