@@ -43,14 +43,17 @@ func MarshalPacket(packet any) (any, error) {
 	default:
 		return nil, fmt.Errorf("Unknown packet: %T", packet)
 	}
-	type PacketOut any
-	return struct {
-		Type string `json:"type"`
-		PacketOut
-	}{
-		Type:      packetType,
-		PacketOut: PacketOut(packet),
-	}, nil
+	var m map[string]any
+	p, err := json.Marshal(packet)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(p, &m)
+	if err != nil {
+		return nil, err
+	}
+	m["type"] = packetType
+	return m, nil
 }
 
 func ReadPacket(connection *websocket.Conn, packet any) error {

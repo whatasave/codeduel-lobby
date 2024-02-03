@@ -10,6 +10,7 @@ import (
 
 const (
 	InternalServerError = 1011
+	Timeout             = 4400
 	Unauthorized        = 4401
 	Forbidden           = 4403
 	NotFound            = 4404
@@ -64,8 +65,10 @@ func handleClient(connection *websocket.Conn, lobby *Lobby, user *User) {
 		var packet any
 		err := ReadPacket(connection, &packet)
 		if err != nil {
-			log.Printf("error while parsing packet: %v\n", err)
-			continue
+			log.Printf("error while reading packet: %v\n", err)
+			closeMessage := websocket.FormatCloseMessage(Timeout, "connection timed out")
+			connection.WriteMessage(websocket.CloseMessage, closeMessage)
+			break
 		}
 		handlePacket(packet, lobby, user)
 	}
