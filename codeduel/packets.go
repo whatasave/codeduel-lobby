@@ -7,7 +7,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-func UnmarshalPacket(message []byte, v any) error {
+func UnmarshalPacket(message []byte, packet *any) error {
 	var packetType struct {
 		Type string `json:"type"`
 	}
@@ -16,21 +16,23 @@ func UnmarshalPacket(message []byte, v any) error {
 		return err
 	}
 
-	var packet interface{}
+	var typpedPacket interface{}
 	switch packetType.Type {
 	case "updateSettings":
-		packet = new(PacketInSettings)
+		typpedPacket = new(PacketInSettings)
 	case "updatePlayerStatus":
-		packet = new(PacketInUserStatus)
+		typpedPacket = new(PacketInUserStatus)
 	case "startLobby":
-		packet = new(PacketInStartLobby)
+		typpedPacket = new(PacketInStartLobby)
 	default:
 		return fmt.Errorf("Unknown message type: %s", packetType.Type)
 	}
 
-	if err := json.Unmarshal(message, &packet); err != nil {
+	if err := json.Unmarshal(message, &typpedPacket); err != nil {
 		return err
 	}
+
+	*packet = typpedPacket
 
 	return nil
 }
@@ -56,7 +58,7 @@ func MarshalPacket(packet any) (any, error) {
 	return m, nil
 }
 
-func ReadPacket(connection *websocket.Conn, packet any) error {
+func ReadPacket(connection *websocket.Conn, packet *any) error {
 	_, bytes, err := connection.ReadMessage()
 	if err != nil {
 		return err
@@ -90,6 +92,7 @@ type PacketInStartLobby struct {
 }
 
 type PacketOutLobby struct {
+	LobbyID  string           `json:"lobby_id"`
 	Settings Settings         `json:"settings"`
 	Users    map[UserId]*User `json:"users"`
 	State    any              `json:"state"`

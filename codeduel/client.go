@@ -57,6 +57,7 @@ func handleClient(connection *websocket.Conn, lobby *Lobby, user *User) {
 	connection.SetPongHandler(func(string) error { connection.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	user.Connection = connection
 	SendPacket(connection, PacketOutLobby{
+		LobbyID:  lobby.Id,
 		Settings: lobby.Settings,
 		Users:    lobby.Users,
 		State:    lobby.State,

@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/xedom/codeduel-lobby/codeduel"
@@ -50,9 +49,8 @@ func createLobby(response http.ResponseWriter, request *http.Request) {
 		codeduel.RejectConnection(response, request, codeduel.Unauthorized, err.Error())
 		return
 	}
-	lobbyId := uuid.NewString()
 	lobby := codeduel.NewLobby(user)
-	lobbies[lobbyId] = &lobby
+	lobbies[lobby.Id] = &lobby
 	_, err = codeduel.StartWebSocket(response, request, &lobby, user)
 	if err != nil {
 		codeduel.RejectConnection(response, request, codeduel.InternalServerError, "cannot start websocket connection")

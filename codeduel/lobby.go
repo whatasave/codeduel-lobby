@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/xedom/codeduel-lobby/codeduel/utils"
 )
 
 type Lobby struct {
+	Id       string
 	Owner    *User
 	Users    map[UserId]*User
 	Settings Settings
@@ -21,7 +23,7 @@ type Settings struct {
 }
 
 type PreLobbyState struct {
-	Ready []UserId
+	Ready []UserId `json:"ready"`
 }
 
 type GameLobbyState struct {
@@ -29,6 +31,7 @@ type GameLobbyState struct {
 
 func NewLobby(owner *User) Lobby {
 	return Lobby{
+		Id:    uuid.NewString(),
 		Owner: owner,
 		Users: map[UserId]*User{owner.Id: owner},
 		Settings: Settings{
