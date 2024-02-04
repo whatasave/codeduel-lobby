@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -23,6 +25,7 @@ func main() {
 
 	router := mux.NewRouter()
 	router.HandleFunc("/create", createLobby)
+	router.HandleFunc("/lobbies", getAllLobbies)
 	router.HandleFunc("/join/{lobby}", joinLobby)
 	router.HandleFunc("/connect/{lobby}", connectLobby)
 
@@ -54,6 +57,45 @@ func createLobby(response http.ResponseWriter, request *http.Request) {
 	_, err = codeduel.StartWebSocket(response, request, &lobby, user)
 	if err != nil {
 		codeduel.RejectConnection(response, request, codeduel.InternalServerError, "cannot start websocket connection")
+		return
+	}
+}
+
+func getAllLobbies(response http.ResponseWriter, request *http.Request) {
+	type lobbyListType struct {
+		id          string
+		owner       string
+		users       []string
+		max_players int
+		state       string
+	}
+
+	var lobbyList []lobbyListType
+
+	for key, lobby := range lobbies {
+
+		var lobbyUsers []string
+		for userID := range lobby.Users {
+			lobbyUsers = append(lobbyUsers, strconv.Itoa(int(userID)))
+		}
+
+		lobbyList = append(lobbyList, lobbyListType{
+			id:          key,
+			owner:       strconv.Itoa(int(lobby.Owner.Id)), // TODO replace with the name of the owner of the lobby
+			users:       lobbyUsers,
+			max_players: lobby.Settings.MaxPlayers,
+			state:       "PreLobby", // TODO get lobby status
+		})
+	}
+
+	fmt.Printf("lobbies: %v\n", lobbyList)
+
+	response.Header().Add("Content-Type", "application/json")
+	response.WriteHeader(http.StatusOK)
+	err := json.NewEncoder(response).Encode(lobbyList)
+	if err != nil {
+		log.Fatalf("[API] error with encoding lobbies into json: %v", err.Error())
+		response.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 }
