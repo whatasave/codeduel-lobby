@@ -63,28 +63,29 @@ func createLobby(response http.ResponseWriter, request *http.Request) {
 
 func getAllLobbies(response http.ResponseWriter, request *http.Request) {
 	type lobbyListType struct {
-		id          string
-		owner       string
-		users       []string
-		max_players int
-		state       string
+		Id          string   `json:"id"`
+		Owner       string   `json:"owner"`
+		Users       []string `json:"players"`
+		Max_players int      `json:"max_players"`
+		State       string   `json:"state"`
 	}
 
-	var lobbyList []lobbyListType
+	lobbyList := make([]lobbyListType, 0, len(lobbies))
 
 	for key, lobby := range lobbies {
 
-		var lobbyUsers []string
+		lobbyUsers := make([]string, 0, len(lobby.Users))
+
 		for userID := range lobby.Users {
 			lobbyUsers = append(lobbyUsers, strconv.Itoa(int(userID)))
 		}
 
 		lobbyList = append(lobbyList, lobbyListType{
-			id:          key,
-			owner:       strconv.Itoa(int(lobby.Owner.Id)), // TODO replace with the name of the owner of the lobby
-			users:       lobbyUsers,
-			max_players: lobby.Settings.MaxPlayers,
-			state:       "PreLobby", // TODO get lobby status
+			Id:          key,
+			Owner:       strconv.Itoa(int(lobby.Owner.Id)), // TODO replace with the name of the owner of the lobby
+			Users:       lobbyUsers,
+			Max_players: lobby.Settings.MaxPlayers,
+			State:       "PreLobby", // TODO get lobby status
 		})
 	}
 
