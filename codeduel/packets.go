@@ -16,23 +16,23 @@ func UnmarshalPacket(message []byte, packet *any) error {
 		return err
 	}
 
-	var typpedPacket interface{}
+	var typedPacket interface{}
 	switch packetType.Type {
 	case "updateSettings":
-		typpedPacket = new(PacketInSettings)
+		typedPacket = new(PacketInSettings)
 	case "updatePlayerStatus":
-		typpedPacket = new(PacketInUserStatus)
+		typedPacket = new(PacketInUserStatus)
 	case "startLobby":
-		typpedPacket = new(PacketInStartLobby)
+		typedPacket = new(PacketInStartLobby)
 	default:
 		return fmt.Errorf("Unknown message type: %s", packetType.Type)
 	}
 
-	if err := json.Unmarshal(message, &typpedPacket); err != nil {
+	if err := json.Unmarshal(message, &typedPacket); err != nil {
 		return err
 	}
 
-	*packet = typpedPacket
+	*packet = typedPacket
 
 	return nil
 }
