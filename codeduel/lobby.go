@@ -23,10 +23,12 @@ type Settings struct {
 }
 
 type PreLobbyState struct {
+	Type  string   `json:"type"`
 	Ready []UserId `json:"ready"`
 }
 
 type GameLobbyState struct {
+	Type string `json:"type"`
 }
 
 func NewLobby(owner *User) Lobby {
@@ -40,6 +42,7 @@ func NewLobby(owner *User) Lobby {
 			AllowedLanguages: []string{"typescript", "python"},
 		},
 		State: PreLobbyState{
+			Type:  "pre_lobby",
 			Ready: []UserId{},
 		},
 	}
@@ -84,7 +87,9 @@ func (lobby *Lobby) SetState(user *User, state string) error {
 
 func (lobby *Lobby) Start() error {
 	if _, ok := lobby.State.(PreLobbyState); ok {
-		lobby.State = GameLobbyState{}
+		lobby.State = GameLobbyState{
+			Type: "game",
+		}
 		return nil
 	} else {
 		return fmt.Errorf("Lobby is not in PreLobby")
