@@ -117,7 +117,9 @@ func joinLobby(response http.ResponseWriter, request *http.Request) {
 		response.WriteHeader(http.StatusForbidden)
 		return
 	}
-	lobby.AddUser(user)
+	if user := lobby.GetUser(user); user == nil {
+		lobby.AddUser(user)
+	}
 	_, err = codeduel.StartWebSocket(response, request, lobby, user)
 	if err != nil {
 		codeduel.RejectConnection(response, request, codeduel.InternalServerError, "cannot start websocket connection")
@@ -141,12 +143,10 @@ func connectLobby(response http.ResponseWriter, request *http.Request) {
 		codeduel.RejectConnection(response, request, codeduel.Forbidden, "user not in lobby")
 		return
 	}
-	connection, err := codeduel.StartWebSocket(response, request, lobby, user)
+	_, err = codeduel.StartWebSocket(response, request, lobby, user)
 	if err != nil {
 		codeduel.RejectConnection(response, request, codeduel.InternalServerError, "cannot start websocket connection")
 		return
-	} else {
-		user.Connection = connection
 	}
 }
 
