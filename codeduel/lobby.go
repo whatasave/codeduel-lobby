@@ -49,7 +49,7 @@ func (lobby *Lobby) CannotJoin(user *User) error {
 	if _, ok := lobby.State.(PreLobbyState); !ok {
 		return fmt.Errorf("Lobby is not in PreLobby")
 	}
-	if len(lobby.Users) > +lobby.Settings.MaxPlayers {
+	if len(lobby.Users) >= lobby.Settings.MaxPlayers {
 		return fmt.Errorf("Lobby is full")
 	}
 	return nil
