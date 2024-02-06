@@ -17,10 +17,8 @@ const (
 )
 
 const (
-	writeWait      = 10 * time.Second    // Time allowed to write a message to the peer.
-	pongWait       = 60 * time.Second    // Time allowed to read the next pong message from the peer.
-	pingPeriod     = (pongWait * 9) / 10 // Send pings to peer with this period. Must be less than pongWait.
-	maxMessageSize = 1024                // Maximum message size allowed from peer.
+	writeWait      = 10 * time.Second
+	maxMessageSize = 1024
 )
 
 var upgrader = websocket.Upgrader{
@@ -53,8 +51,6 @@ func StartWebSocket(response http.ResponseWriter, request *http.Request, lobby *
 func handleClient(connection *websocket.Conn, lobby *Lobby, user *User) {
 	defer connection.Close()
 	connection.SetReadLimit(maxMessageSize)
-	connection.SetReadDeadline(time.Now().Add(pongWait))
-	connection.SetPongHandler(func(string) error { connection.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	user.Connection = connection
 	SendPacket(connection, PacketOutLobby{
 		LobbyID:  lobby.Id,

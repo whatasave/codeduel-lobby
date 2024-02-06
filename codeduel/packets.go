@@ -92,7 +92,7 @@ type PacketInStartLobby struct {
 }
 
 type PacketOutLobby struct {
-	LobbyID  string           `json:"lobby_id"`
+	LobbyID  string           `json:"id"`
 	Settings Settings         `json:"settings"`
 	Users    map[UserId]*User `json:"users"`
 	State    any              `json:"state"`
