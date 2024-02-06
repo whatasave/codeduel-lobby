@@ -42,7 +42,7 @@ func NewLobby(owner *User) Lobby {
 			AllowedLanguages: []string{"typescript", "python"},
 		},
 		State: PreLobbyState{
-			Type:  "pre_lobby",
+			Type:  "preLobby",
 			Ready: []UserId{},
 		},
 	}
