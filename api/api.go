@@ -77,11 +77,11 @@ func (s *APIServer) createLobby(response http.ResponseWriter, request *http.Requ
 
 func (s *APIServer) getAllLobbies(response http.ResponseWriter, request *http.Request) {
 	type lobbyListType struct {
-		Id          string   `json:"id"`
-		Owner       string   `json:"owner"`
-		Users       []string `json:"players"`
-		Max_players int      `json:"max_players"`
-		State       any      `json:"state"`
+		Id          string   							`json:"id"`
+		Owner       *codeduel.User 						`json:"owner"`
+		Users       map[codeduel.UserId]*codeduel.User 	`json:"users"`
+		Max_players int      							`json:"max_players"`
+		State       any      							`json:"state"`
 	}
 
 	lobbyList := make([]lobbyListType, 0, len(s.Lobbies))
@@ -96,8 +96,9 @@ func (s *APIServer) getAllLobbies(response http.ResponseWriter, request *http.Re
 
 		lobbyList = append(lobbyList, lobbyListType{
 			Id:          key,
-			Owner:       strconv.Itoa(int(lobby.Owner.Id)), // TODO replace with the name of the owner of the lobby
-			Users:       lobbyUsers,
+			// Owner:       strconv.Itoa(int(lobby.Owner.Id)), // TODO replace with the name of the owner of the lobby
+			Owner:       lobby.Owner,
+			Users:       lobby.Users,
 			Max_players: lobby.Settings.MaxPlayers,
 			State:       lobby.State,
 		})
