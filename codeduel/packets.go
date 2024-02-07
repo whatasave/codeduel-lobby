@@ -16,7 +16,7 @@ func UnmarshalPacket(message []byte, packet *any) error {
 		return err
 	}
 
-	var typedPacket interface{}
+	var typedPacket any
 	switch packetType.Type {
 	case "updateSettings":
 		typedPacket = new(PacketInSettings)

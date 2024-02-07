@@ -1,6 +1,7 @@
 package codeduel
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -72,14 +73,13 @@ func handleClient(connection *websocket.Conn, lobby *Lobby, user *User) {
 }
 
 func handlePacket(packet any, lobby *Lobby, user *User) {
-	log.Printf("received packet from %v: %v\n", user, packet)
 	switch packet.(type) {
-	case PacketInSettings:
-		handlePacketSettings(packet.(PacketInSettings), lobby, user)
-	case PacketInUserStatus:
-		handlePacketUserStatus(packet.(PacketInUserStatus), lobby, user)
-	case PacketInStartLobby:
-		handlePacketStartLobby(packet.(PacketInStartLobby), lobby, user)
+	case *PacketInSettings:
+		handlePacketSettings(*packet.(*PacketInSettings), lobby, user)
+	case *PacketInUserStatus:
+		handlePacketUserStatus(*packet.(*PacketInUserStatus), lobby, user)
+	case *PacketInStartLobby:
+		handlePacketStartLobby(*packet.(*PacketInStartLobby), lobby, user)
 	}
 }
 
@@ -95,6 +95,7 @@ func handlePacketUserStatus(packet PacketInUserStatus, lobby *Lobby, user *User)
 }
 
 func handlePacketStartLobby(packet PacketInStartLobby, lobby *Lobby, user *User) {
+	fmt.Printf("start")
 	if lobby.Owner.Id != user.Id {
 		log.Printf("user %v is not the owner of the lobby\n", user)
 		return
