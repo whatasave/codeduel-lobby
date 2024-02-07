@@ -23,10 +23,12 @@ type Settings struct {
 }
 
 type PreLobbyState struct {
+	Type  string   `json:"type"`
 	Ready []UserId `json:"ready"`
 }
 
 type GameLobbyState struct {
+	Type string `json:"type"`
 }
 
 func NewLobby(owner *User) Lobby {
@@ -40,6 +42,7 @@ func NewLobby(owner *User) Lobby {
 			AllowedLanguages: []string{"typescript", "python"},
 		},
 		State: PreLobbyState{
+			Type:  "preLobby",
 			Ready: []UserId{},
 		},
 	}
@@ -49,7 +52,7 @@ func (lobby *Lobby) CannotJoin(user *User) error {
 	if _, ok := lobby.State.(PreLobbyState); !ok {
 		return fmt.Errorf("Lobby is not in PreLobby")
 	}
-	if len(lobby.Users) > +lobby.Settings.MaxPlayers {
+	if len(lobby.Users) >= lobby.Settings.MaxPlayers {
 		return fmt.Errorf("Lobby is full")
 	}
 	return nil
@@ -84,7 +87,9 @@ func (lobby *Lobby) SetState(user *User, state string) error {
 
 func (lobby *Lobby) Start() error {
 	if _, ok := lobby.State.(PreLobbyState); ok {
-		lobby.State = GameLobbyState{}
+		lobby.State = GameLobbyState{
+			Type: "game",
+		}
 		return nil
 	} else {
 		return fmt.Errorf("Lobby is not in PreLobby")
