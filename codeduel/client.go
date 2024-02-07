@@ -95,7 +95,7 @@ func handlePacketUserStatus(packet PacketInUserStatus, lobby *Lobby, user *User)
 }
 
 func handlePacketStartLobby(packet PacketInStartLobby, lobby *Lobby, user *User) {
-	fmt.Printf("start")
+	fmt.Println("start")
 	if lobby.Owner.Id != user.Id {
 		log.Printf("user %v is not the owner of the lobby\n", user)
 		return

@@ -15,16 +15,16 @@ import (
 )
 
 type APIServer struct {
-	Addr string
-	Lobbies map[string]*codeduel.Lobby
+	Addr              string
+	Lobbies           map[string]*codeduel.Lobby
 	ReadHeaderTimeout time.Duration
 }
 
 func NewAPIServer(addr string, lobbies map[string]*codeduel.Lobby) *APIServer {
 	log.Print("[API] Starting API server on ", addr)
 	return &APIServer{
-		Addr: addr,
-		Lobbies: lobbies,
+		Addr:              addr,
+		Lobbies:           lobbies,
 		ReadHeaderTimeout: 3 * time.Second,
 	}
 }
@@ -37,7 +37,6 @@ func (s *APIServer) Run() {
 	router.HandleFunc("/join/{lobby}", s.joinLobby)
 	router.HandleFunc("/connect/{lobby}", s.connectLobby)
 
-
 	err := http.ListenAndServe(s.Addr, handlers.CORS(
 		handlers.AllowedOrigins([]string{"*"}),
 		handlers.AllowedMethods([]string{"POST"}),
@@ -49,7 +48,6 @@ func (s *APIServer) Run() {
 		log.Fatal("[API] Cannot start http server: ", err)
 	}
 }
-
 
 func (s *APIServer) createLobby(response http.ResponseWriter, request *http.Request) {
 	user, err := GetUser(request)
@@ -72,7 +70,7 @@ func (s *APIServer) getAllLobbies(response http.ResponseWriter, request *http.Re
 		Owner       string   `json:"owner"`
 		Users       []string `json:"players"`
 		Max_players int      `json:"max_players"`
-		State       string   `json:"state"`
+		State       any      `json:"state"`
 	}
 
 	lobbyList := make([]lobbyListType, 0, len(s.Lobbies))
@@ -90,7 +88,7 @@ func (s *APIServer) getAllLobbies(response http.ResponseWriter, request *http.Re
 			Owner:       strconv.Itoa(int(lobby.Owner.Id)), // TODO replace with the name of the owner of the lobby
 			Users:       lobbyUsers,
 			Max_players: lobby.Settings.MaxPlayers,
-			State:       "PreLobby", // TODO get lobby status
+			State:       lobby.State,
 		})
 	}
 
