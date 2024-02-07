@@ -56,6 +56,7 @@ func handleClient(connection *websocket.Conn, lobby *Lobby, user *User) {
 	SendPacket(connection, PacketOutLobby{
 		LobbyID:  lobby.Id,
 		Settings: lobby.Settings,
+		Owner:    lobby.Owner,
 		Users:    lobby.Users,
 		State:    lobby.State,
 	})

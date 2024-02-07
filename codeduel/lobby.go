@@ -63,6 +63,7 @@ func (lobby *Lobby) GetUser(user *User) *User {
 }
 
 func (lobby *Lobby) AddUser(user *User) {
+	fmt.Printf("Adding user to lobby: %v\n", user)
 	lobby.Users[user.Id] = user
 }
 

@@ -94,6 +94,7 @@ type PacketInStartLobby struct {
 type PacketOutLobby struct {
 	LobbyID  string           `json:"id"`
 	Settings Settings         `json:"settings"`
+	Owner    *User            `json:"owner"`
 	Users    map[UserId]*User `json:"users"`
 	State    any              `json:"state"`
 }

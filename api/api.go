@@ -132,7 +132,7 @@ func (s *APIServer) joinLobby(response http.ResponseWriter, request *http.Reques
 		response.WriteHeader(http.StatusForbidden)
 		return
 	}
-	if user := lobby.GetUser(user); user == nil {
+	if isUserInLobby := lobby.GetUser(user); isUserInLobby == nil {
 		lobby.AddUser(user)
 	}
 	_, err = codeduel.StartWebSocket(response, request, lobby, user)
