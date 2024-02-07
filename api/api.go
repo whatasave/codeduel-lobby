@@ -1,9 +1,11 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -18,6 +20,14 @@ type APIServer struct {
 	Addr string
 	Lobbies map[string]*codeduel.Lobby
 	ReadHeaderTimeout time.Duration
+}
+
+type VerifyTokenResponse struct {
+	Id			int32  `json:"id"`
+	Username	string `json:"username"`
+	Email		string `json:"email"`
+	Image_url	string `json:"image_url"`
+	Expires_at	string `json:"expires_at"`
 }
 
 func NewAPIServer(addr string, lobbies map[string]*codeduel.Lobby) *APIServer {
@@ -53,6 +63,7 @@ func (s *APIServer) Run() {
 
 func (s *APIServer) createLobby(response http.ResponseWriter, request *http.Request) {
 	user, err := GetUser(request)
+	fmt.Println("user: ", user)
 	if err != nil {
 		codeduel.RejectConnection(response, request, codeduel.Unauthorized, err.Error())
 		return
@@ -160,12 +171,53 @@ func GetUser(request *http.Request) (*codeduel.User, error) {
 	if err != nil {
 		return nil, errors.New("missing jwt cookie")
 	}
+	// id, err := strconv.Atoi(cookie.Value)
+	// if err != nil { return nil, err }
+
 	// TODO: validate jwt calling codeduel-be
-	id, err := strconv.Atoi(cookie.Value)
+	verifyTokenResponse, err := verifyJwt(cookie.Value)
+
+
+	return &codeduel.User{
+		Id: codeduel.UserId(verifyTokenResponse.Id),
+		Username: verifyTokenResponse.Username,
+		Email: verifyTokenResponse.Email,
+		Avatar: verifyTokenResponse.Image_url,
+		Token: cookie.Value,
+		TokenExpiresAt: verifyTokenResponse.Expires_at,
+	}, nil
+}
+
+func verifyJwt(jwt string) (*VerifyTokenResponse, error) {
+	requestURL := "http://localhost:5000/api/v1/validateToken"
+	requestBodyMap := map[string]string{
+		"token": jwt,
+	}
+	requestBody, err := json.Marshal(requestBodyMap)
 	if err != nil {
 		return nil, err
 	}
-	return &codeduel.User{
-		Id: codeduel.UserId(id),
-	}, nil
+	req, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(requestBody))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Invalid token")
+	}
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	verifyTokenResponse := &VerifyTokenResponse{}
+	json.Unmarshal(respBody, &verifyTokenResponse)
+
+	return verifyTokenResponse, nil
 }
