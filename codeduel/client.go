@@ -1,6 +1,7 @@
 package codeduel
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -40,16 +41,16 @@ func RejectConnection(response http.ResponseWriter, request *http.Request, code 
 	return connection.Close()
 }
 
-func StartWebSocket(response http.ResponseWriter, request *http.Request, lobby *Lobby, user *User) (*websocket.Conn, error) {
+func (s *APIServer) StartWebSocket(response http.ResponseWriter, request *http.Request, lobby *Lobby, user *User) (*websocket.Conn, error) {
 	connection, err := upgrader.Upgrade(response, request, nil)
 	if err != nil {
 		return nil, err
 	}
-	go handleClient(connection, lobby, user)
+	go s.handleClient(connection, lobby, user)
 	return connection, nil
 }
 
-func handleClient(connection *websocket.Conn, lobby *Lobby, user *User) {
+func (s *APIServer) handleClient(connection *websocket.Conn, lobby *Lobby, user *User) {
 	defer connection.Close()
 	connection.SetReadLimit(maxMessageSize)
 	user.Connection = connection
@@ -69,39 +70,39 @@ func handleClient(connection *websocket.Conn, lobby *Lobby, user *User) {
 			connection.WriteMessage(websocket.CloseMessage, closeMessage)
 			break
 		}
-		handlePacket(packet, lobby, user)
+		s.handlePacket(packet, lobby, user)
 	}
 }
 
-func handlePacket(packet any, lobby *Lobby, user *User) {
+func (s *APIServer) handlePacket(packet any, lobby *Lobby, user *User) {
 	switch packet.(type) {
 	case *PacketInSettings:
-		handlePacketSettings(*packet.(*PacketInSettings), lobby, user)
+		s.handlePacketSettings(*packet.(*PacketInSettings), lobby, user)
 	case *PacketInUserStatus:
-		handlePacketUserStatus(*packet.(*PacketInUserStatus), lobby, user)
+		s.handlePacketUserStatus(*packet.(*PacketInUserStatus), lobby, user)
 	case *PacketInStartLobby:
-		handlePacketStartLobby(*packet.(*PacketInStartLobby), lobby, user)
+		s.handlePacketStartLobby(*packet.(*PacketInStartLobby), lobby, user)
 	}
 }
 
-func handlePacketSettings(packet PacketInSettings, lobby *Lobby, user *User) {
+func (s *APIServer) handlePacketSettings(packet PacketInSettings, lobby *Lobby, user *User) {
 	lobby.SetSettings(packet.Settings)
 }
 
-func handlePacketUserStatus(packet PacketInUserStatus, lobby *Lobby, user *User) {
+func (s *APIServer) handlePacketUserStatus(packet PacketInUserStatus, lobby *Lobby, user *User) {
 	err := lobby.SetState(user, packet.Status)
 	if err != nil {
 		log.Printf("error while setting user state: %v\n", err)
 	}
 }
 
-func handlePacketStartLobby(packet PacketInStartLobby, lobby *Lobby, user *User) {
+func (s *APIServer) handlePacketStartLobby(packet PacketInStartLobby, lobby *Lobby, user *User) {
 	fmt.Println("start")
 	if lobby.Owner.Id != user.Id {
 		log.Printf("user %v is not the owner of the lobby\n", user)
 		return
 	}
-	err := lobby.Start()
+	err := s.startLobby(lobby, context.Background())
 	if err != nil {
 		log.Printf("error while starting lobby: %v\n", err)
 	}

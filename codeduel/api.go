@@ -1,4 +1,4 @@
-package api
+package codeduel
 
 import (
 	"bytes"
@@ -13,24 +13,23 @@ import (
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	"github.com/xedom/codeduel-lobby/codeduel"
 )
 
 type APIServer struct {
 	Addr              string
-	Lobbies           map[string]*codeduel.Lobby
+	Lobbies           map[string]*Lobby
 	ReadHeaderTimeout time.Duration
 }
 
 type VerifyTokenResponse struct {
-	Id			int32  `json:"id"`
-	Username	string `json:"username"`
-	Email		string `json:"email"`
-	Image_url	string `json:"image_url"`
-	Expires_at	string `json:"expires_at"`
+	Id         int32  `json:"id"`
+	Username   string `json:"username"`
+	Email      string `json:"email"`
+	Image_url  string `json:"image_url"`
+	Expires_at string `json:"expires_at"`
 }
 
-func NewAPIServer(addr string, lobbies map[string]*codeduel.Lobby) *APIServer {
+func NewAPIServer(addr string, lobbies map[string]*Lobby) *APIServer {
 	log.Print("[API] Starting API server on ", addr)
 	return &APIServer{
 		Addr:              addr,
@@ -63,25 +62,25 @@ func (s *APIServer) createLobby(response http.ResponseWriter, request *http.Requ
 	user, err := GetUser(request)
 	fmt.Println("user: ", user)
 	if err != nil {
-		codeduel.RejectConnection(response, request, codeduel.Unauthorized, err.Error())
+		RejectConnection(response, request, Unauthorized, err.Error())
 		return
 	}
-	lobby := codeduel.NewLobby(user)
+	lobby := NewLobby(user)
 	s.Lobbies[lobby.Id] = &lobby
-	_, err = codeduel.StartWebSocket(response, request, &lobby, user)
+	_, err = s.StartWebSocket(response, request, &lobby, user)
 	if err != nil {
-		codeduel.RejectConnection(response, request, codeduel.InternalServerError, "cannot start websocket connection")
+		RejectConnection(response, request, InternalServerError, "cannot start websocket connection")
 		return
 	}
 }
 
 func (s *APIServer) getAllLobbies(response http.ResponseWriter, request *http.Request) {
 	type lobbyListType struct {
-		Id          string   							`json:"id"`
-		Owner       *codeduel.User 						`json:"owner"`
-		Users       map[codeduel.UserId]*codeduel.User 	`json:"users"`
-		Max_players int      							`json:"max_players"`
-		State       any      							`json:"state"`
+		Id          string           `json:"id"`
+		Owner       *User            `json:"owner"`
+		Users       map[UserId]*User `json:"users"`
+		Max_players int              `json:"max_players"`
+		State       any              `json:"state"`
 	}
 
 	lobbyList := make([]lobbyListType, 0, len(s.Lobbies))
@@ -95,7 +94,7 @@ func (s *APIServer) getAllLobbies(response http.ResponseWriter, request *http.Re
 		}
 
 		lobbyList = append(lobbyList, lobbyListType{
-			Id:          key,
+			Id: key,
 			// Owner:       strconv.Itoa(int(lobby.Owner.Id)), // TODO replace with the name of the owner of the lobby
 			Owner:       lobby.Owner,
 			Users:       lobby.Users,
@@ -119,7 +118,7 @@ func (s *APIServer) getAllLobbies(response http.ResponseWriter, request *http.Re
 func (s *APIServer) joinLobby(response http.ResponseWriter, request *http.Request) {
 	user, err := GetUser(request)
 	if err != nil {
-		codeduel.RejectConnection(response, request, codeduel.Unauthorized, err.Error())
+		RejectConnection(response, request, Unauthorized, err.Error())
 		return
 	}
 	lobbyId := mux.Vars(request)["lobby"]
@@ -135,9 +134,9 @@ func (s *APIServer) joinLobby(response http.ResponseWriter, request *http.Reques
 	if isUserInLobby := lobby.GetUser(user); isUserInLobby == nil {
 		lobby.AddUser(user)
 	}
-	_, err = codeduel.StartWebSocket(response, request, lobby, user)
+	_, err = s.StartWebSocket(response, request, lobby, user)
 	if err != nil {
-		codeduel.RejectConnection(response, request, codeduel.InternalServerError, "cannot start websocket connection")
+		RejectConnection(response, request, InternalServerError, "cannot start websocket connection")
 		return
 	}
 }
@@ -145,45 +144,54 @@ func (s *APIServer) joinLobby(response http.ResponseWriter, request *http.Reques
 func (s *APIServer) connectLobby(response http.ResponseWriter, request *http.Request) {
 	user, err := GetUser(request)
 	if err != nil {
-		codeduel.RejectConnection(response, request, codeduel.Unauthorized, err.Error())
+		RejectConnection(response, request, Unauthorized, err.Error())
 		return
 	}
 	lobbyId := mux.Vars(request)["lobby"]
 	lobby, ok := s.Lobbies[lobbyId]
 	if !ok {
-		codeduel.RejectConnection(response, request, codeduel.NotFound, "lobby not found")
+		RejectConnection(response, request, NotFound, "lobby not found")
 		return
 	}
 	if user := lobby.GetUser(user); user == nil {
-		codeduel.RejectConnection(response, request, codeduel.Forbidden, "user not in lobby")
+		RejectConnection(response, request, Forbidden, "user not in lobby")
 		return
 	}
-	_, err = codeduel.StartWebSocket(response, request, lobby, user)
+	_, err = s.StartWebSocket(response, request, lobby, user)
 	if err != nil {
-		codeduel.RejectConnection(response, request, codeduel.InternalServerError, "cannot start websocket connection")
+		RejectConnection(response, request, InternalServerError, "cannot start websocket connection")
 		return
 	}
 }
 
-func GetUser(request *http.Request) (*codeduel.User, error) {
+func GetUser(request *http.Request) (*User, error) {
 	cookie, err := request.Cookie("jwt")
 	if err != nil {
 		return nil, errors.New("missing jwt cookie")
 	}
-	// id, err := strconv.Atoi(cookie.Value)
-	// if err != nil { return nil, err }
+	id, err := strconv.Atoi(cookie.Value)
+	if err != nil {
+		return nil, err
+	}
 
 	// TODO: validate jwt calling codeduel-be
-	verifyTokenResponse, err := verifyJwt(cookie.Value)
+	// verifyTokenResponse, err := verifyJwt(cookie.Value)
 
-
-	return &codeduel.User{
-		Id: codeduel.UserId(verifyTokenResponse.Id),
-		Username: verifyTokenResponse.Username,
-		Email: verifyTokenResponse.Email,
-		Avatar: verifyTokenResponse.Image_url,
-		Token: cookie.Value,
-		TokenExpiresAt: verifyTokenResponse.Expires_at,
+	// return &User{
+	// 	Id:             UserId(verifyTokenResponse.Id),
+	// 	Username:       verifyTokenResponse.Username,
+	// 	Email:          verifyTokenResponse.Email,
+	// 	Avatar:         verifyTokenResponse.Image_url,
+	// 	Token:          cookie.Value,
+	// 	TokenExpiresAt: verifyTokenResponse.Expires_at,
+	// }, nil
+	return &User{
+		Id:             UserId(id),
+		Username:       "a",
+		Email:          "a",
+		Avatar:         "a",
+		Token:          cookie.Value,
+		TokenExpiresAt: "a",
 	}, nil
 }
 

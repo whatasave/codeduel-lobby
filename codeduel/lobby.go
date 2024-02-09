@@ -1,6 +1,7 @@
 package codeduel
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -28,7 +29,21 @@ type PreLobbyState struct {
 }
 
 type GameLobbyState struct {
-	Type string `json:"type"`
+	Type      string                  `json:"type"`
+	Challenge Challenge               `json:"challenge"`
+	StartTime time.Time               `json:"start_time"`
+	context   context.CancelCauseFunc `json:"-"`
+}
+
+type Challenge struct {
+	Title       string     `json:"title"`
+	Description string     `json:"description"`
+	TestCases   []TestCase `json:"test_cases"`
+}
+
+type TestCase struct {
+	Input  string `json:"input"`
+	Output string `json:"output"`
 }
 
 func NewLobby(owner *User) Lobby {
@@ -38,7 +53,7 @@ func NewLobby(owner *User) Lobby {
 		Users: map[UserId]*User{owner.Id: owner},
 		Settings: Settings{
 			MaxPlayers:       8,
-			GameDuration:     time.Minute * 15,
+			GameDuration:     time.Second * 30, // time.Minute * 15,
 			AllowedLanguages: []string{"typescript", "python"},
 		},
 		State: PreLobbyState{
@@ -86,13 +101,24 @@ func (lobby *Lobby) SetState(user *User, state string) error {
 	}
 }
 
-func (lobby *Lobby) Start() error {
+func (s *APIServer) startLobby(lobby *Lobby, ctx context.Context) error {
 	if _, ok := lobby.State.(PreLobbyState); ok {
+		ctx, cancel := context.WithCancelCause(ctx)
 		lobby.State = GameLobbyState{
-			Type: "game",
+			Type:      "game",
+			Challenge: RandomChallenge(),
+			StartTime: time.Now(),
+			context:   cancel,
 		}
+		go s.handleGame(lobby, ctx)
 		return nil
 	} else {
 		return fmt.Errorf("Lobby is not in PreLobby")
 	}
+}
+
+func (s *APIServer) handleGame(lobby *Lobby, ctx context.Context) {
+	state := lobby.State.(GameLobbyState)
+	utils.WaitUntil(ctx, state.StartTime.Add(lobby.Settings.GameDuration))
+	delete(s.Lobbies, lobby.Id)
 }

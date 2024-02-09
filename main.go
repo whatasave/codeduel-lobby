@@ -4,7 +4,6 @@ import (
 	"flag"
 	"log"
 
-	"github.com/xedom/codeduel-lobby/api"
 	"github.com/xedom/codeduel-lobby/codeduel"
 )
 
@@ -16,6 +15,6 @@ func main() {
 	flag.Parse()
 	log.Printf("starting server on addr http://%s\n", *addr)
 
-	server := api.NewAPIServer(*addr, lobbies)
+	server := codeduel.NewAPIServer(*addr, lobbies)
 	server.Run()
 }
