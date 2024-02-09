@@ -101,6 +101,17 @@ func (lobby *Lobby) SetState(user *User, state string) error {
 	}
 }
 
+func GetStateType(state any) string {
+	switch state.(type) {
+	case PreLobbyState:
+		return "preLobby"
+	case GameLobbyState:
+		return "game"
+	default:
+		return "unknown"
+	}
+}
+
 func (s *APIServer) startLobby(lobby *Lobby, ctx context.Context) error {
 	if _, ok := lobby.State.(PreLobbyState); ok {
 		ctx, cancel := context.WithCancelCause(ctx)

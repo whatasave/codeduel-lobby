@@ -74,47 +74,6 @@ func (s *APIServer) createLobby(response http.ResponseWriter, request *http.Requ
 	}
 }
 
-func (s *APIServer) getAllLobbies(response http.ResponseWriter, request *http.Request) {
-	type lobbyListType struct {
-		Id          string           `json:"id"`
-		Owner       *User            `json:"owner"`
-		Users       map[UserId]*User `json:"users"`
-		Max_players int              `json:"max_players"`
-		State       any              `json:"state"`
-	}
-
-	lobbyList := make([]lobbyListType, 0, len(s.Lobbies))
-
-	for key, lobby := range s.Lobbies {
-
-		lobbyUsers := make([]string, 0, len(lobby.Users))
-
-		for userID := range lobby.Users {
-			lobbyUsers = append(lobbyUsers, strconv.Itoa(int(userID)))
-		}
-
-		lobbyList = append(lobbyList, lobbyListType{
-			Id: key,
-			// Owner:       strconv.Itoa(int(lobby.Owner.Id)), // TODO replace with the name of the owner of the lobby
-			Owner:       lobby.Owner,
-			Users:       lobby.Users,
-			Max_players: lobby.Settings.MaxPlayers,
-			State:       lobby.State,
-		})
-	}
-
-	fmt.Printf("lobbies: %v\n", lobbyList)
-
-	response.Header().Add("Content-Type", "application/json")
-	response.WriteHeader(http.StatusOK)
-	err := json.NewEncoder(response).Encode(lobbyList)
-	if err != nil {
-		log.Fatalf("[API] error with encoding lobbies into json: %v", err.Error())
-		response.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-}
-
 func (s *APIServer) joinLobby(response http.ResponseWriter, request *http.Request) {
 	user, err := GetUser(request)
 	if err != nil {
@@ -164,6 +123,46 @@ func (s *APIServer) connectLobby(response http.ResponseWriter, request *http.Req
 	}
 }
 
+func (s *APIServer) getAllLobbies(response http.ResponseWriter, request *http.Request) {
+	type lobbyListType struct {
+		Id         string `json:"id"`
+		Owner      *User  `json:"owner"`
+		Users      int    `json:"users"`
+		MaxPlayers int    `json:"max_players"`
+		State      any    `json:"state"`
+	}
+
+	lobbyList := make([]lobbyListType, 0, len(s.Lobbies))
+
+	for key, lobby := range s.Lobbies {
+
+		lobbyUsers := make([]string, 0, len(lobby.Users))
+
+		for userID := range lobby.Users {
+			lobbyUsers = append(lobbyUsers, strconv.Itoa(int(userID)))
+		}
+
+		lobbyList = append(lobbyList, lobbyListType{
+			Id:         key,
+			Owner:      lobby.Owner,
+			Users:      len(lobby.Users),
+			MaxPlayers: lobby.Settings.MaxPlayers,
+			State:      GetStateType(lobby.State),
+		})
+	}
+
+	fmt.Printf("lobbies: %v\n", lobbyList)
+
+	response.Header().Add("Content-Type", "application/json")
+	response.WriteHeader(http.StatusOK)
+	err := json.NewEncoder(response).Encode(lobbyList)
+	if err != nil {
+		log.Fatalf("[API] error with encoding lobbies into json: %v", err.Error())
+		response.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+}
+
 func GetUser(request *http.Request) (*User, error) {
 	cookie, err := request.Cookie("jwt")
 	if err != nil {
@@ -187,11 +186,11 @@ func GetUser(request *http.Request) (*User, error) {
 	// }, nil
 	return &User{
 		Id:             UserId(id),
-		Username:       "a",
-		Email:          "a",
-		Avatar:         "a",
+		Username:       cookie.Value,
+		Email:          cookie.Value,
+		Avatar:         cookie.Value,
 		Token:          cookie.Value,
-		TokenExpiresAt: "a",
+		TokenExpiresAt: cookie.Value,
 	}, nil
 }
 
