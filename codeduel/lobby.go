@@ -18,9 +18,9 @@ type Lobby struct {
 }
 
 type Settings struct {
-	MaxPlayers       int           `json:"max_players"`
-	GameDuration     time.Duration `json:"game_duration"`
-	AllowedLanguages []string      `json:"allowed_languages"`
+	MaxPlayers       int           `json:"maxPlayers"`
+	GameDuration     time.Duration `json:"gameDuration"`
+	AllowedLanguages []string      `json:"allowedLanguages"`
 }
 
 type PreLobbyState struct {
@@ -31,14 +31,14 @@ type PreLobbyState struct {
 type GameLobbyState struct {
 	Type      string                  `json:"type"`
 	Challenge Challenge               `json:"challenge"`
-	StartTime time.Time               `json:"start_time"`
+	StartTime time.Time               `json:"startTime"`
 	context   context.CancelCauseFunc `json:"-"`
 }
 
 type Challenge struct {
 	Title       string     `json:"title"`
 	Description string     `json:"description"`
-	TestCases   []TestCase `json:"test_cases"`
+	TestCases   []TestCase `json:"testCases"`
 }
 
 type TestCase struct {
@@ -130,6 +130,10 @@ func (s *APIServer) startLobby(lobby *Lobby, ctx context.Context) error {
 
 func (s *APIServer) handleGame(lobby *Lobby, ctx context.Context) {
 	state := lobby.State.(GameLobbyState)
+	lobby.BroadcastPacket(PacketOutGameStarted{
+		state.StartTime,
+		state.Challenge,
+	})
 	utils.WaitUntil(ctx, state.StartTime.Add(lobby.Settings.GameDuration))
 	delete(s.Lobbies, lobby.Id)
 }

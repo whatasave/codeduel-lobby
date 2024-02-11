@@ -3,6 +3,7 @@ package codeduel
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -42,6 +43,8 @@ func MarshalPacket(packet any) (any, error) {
 	switch packet.(type) {
 	case PacketOutLobby:
 		packetType = "lobby"
+	case PacketOutGameStarted:
+		packetType = "gameStarted"
 	default:
 		return nil, fmt.Errorf("Unknown packet: %T", packet)
 	}
@@ -74,6 +77,22 @@ func SendPacket(connection *websocket.Conn, packet any) error {
 	return connection.WriteJSON(packet)
 }
 
+func (lobby *Lobby) BroadcastPacket(packet any) []User {
+	users := make([]User, 0, len(lobby.Users))
+	for _, user := range lobby.Users {
+		if user.Connection != nil {
+			err := SendPacket(user.Connection, packet)
+			if err != nil {
+				fmt.Printf("error while sending packet to user %v: %v\n", user, err)
+				users = append(users, *user)
+			}
+		} else {
+			users = append(users, *user)
+		}
+	}
+	return users
+}
+
 const (
 	StatusReady    = "ready"
 	StatusNotReady = "not_ready"
@@ -97,4 +116,9 @@ type PacketOutLobby struct {
 	Owner    *User            `json:"owner"`
 	Users    map[UserId]*User `json:"users"`
 	State    any              `json:"state"`
+}
+
+type PacketOutGameStarted struct {
+	StartTime time.Time `json:"startTime"`
+	Challenge Challenge `json:"challenge"`
 }
