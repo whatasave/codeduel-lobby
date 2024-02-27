@@ -25,7 +25,10 @@ if the string is not a palindrome the program will return not a complex palindro
 			{Input: "15 16", Output: "31"},
 			{Input: "17 18", Output: "35"},
 			{Input: "19 20", Output: "39"},
-			{Input: "99\n<(^.^)>", Output: strings.Repeat(`<(^.^)>\n`, 99)},
+			{Input: "99\n<(^.^)>", Output: strings.Repeat("<(^.^)>\n", 99)},
+		},
+		HiddenTestCases: []TestCase{
+			{Input: "100\n<(^.^)>", Output: strings.Repeat("<(^.^)>\n", 100)},
 		},
 	}
 }

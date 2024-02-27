@@ -36,9 +36,10 @@ type GameLobbyState struct {
 }
 
 type Challenge struct {
-	Title       string     `json:"title"`
-	Description string     `json:"description"`
-	TestCases   []TestCase `json:"testCases"`
+	Title           string     `json:"title"`
+	Description     string     `json:"description"`
+	TestCases       []TestCase `json:"testCases"`
+	HiddenTestCases []TestCase `json:"hiddenTestCases"`
 }
 
 type TestCase struct {
@@ -93,7 +94,7 @@ func (lobby *Lobby) SetState(user *User, state string) error {
 		} else if state == StatusNotReady {
 			lobbyState.Ready = utils.Remove(lobbyState.Ready, user.Id)
 		} else {
-			return fmt.Errorf("Unknown user state: %v", state)
+			return fmt.Errorf("unknown user state: %v", state)
 		}
 		return nil
 	} else {

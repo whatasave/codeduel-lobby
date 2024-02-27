@@ -215,7 +215,7 @@ func verifyJwt(jwt string) (*VerifyTokenResponse, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Invalid token")
+		return nil, fmt.Errorf("invalid token")
 	}
 
 	respBody, err := io.ReadAll(resp.Body)

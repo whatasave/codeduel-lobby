@@ -2,7 +2,6 @@ package codeduel
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -75,17 +74,19 @@ func (s *APIServer) handleClient(connection *websocket.Conn, lobby *Lobby, user 
 }
 
 func (s *APIServer) handlePacket(packet any, lobby *Lobby, user *User) {
-	switch packet.(type) {
+	switch packet := packet.(type) {
 	case *PacketInSettings:
-		s.handlePacketSettings(*packet.(*PacketInSettings), lobby, user)
+		s.handlePacketSettings(*packet, lobby, user)
 	case *PacketInUserStatus:
-		s.handlePacketUserStatus(*packet.(*PacketInUserStatus), lobby, user)
+		s.handlePacketUserStatus(*packet, lobby, user)
 	case *PacketInStartLobby:
-		s.handlePacketStartLobby(*packet.(*PacketInStartLobby), lobby, user)
+		s.handlePacketStartLobby(*packet, lobby, user)
+	case *PacketInCheck:
+		s.handlePacketCheck(*packet, lobby, user)
 	}
 }
 
-func (s *APIServer) handlePacketSettings(packet PacketInSettings, lobby *Lobby, user *User) {
+func (s *APIServer) handlePacketSettings(packet PacketInSettings, lobby *Lobby, _ *User) {
 	lobby.SetSettings(packet.Settings)
 }
 
@@ -96,8 +97,7 @@ func (s *APIServer) handlePacketUserStatus(packet PacketInUserStatus, lobby *Lob
 	}
 }
 
-func (s *APIServer) handlePacketStartLobby(packet PacketInStartLobby, lobby *Lobby, user *User) {
-	fmt.Println("start")
+func (s *APIServer) handlePacketStartLobby(_ PacketInStartLobby, lobby *Lobby, user *User) {
 	if lobby.Owner.Id != user.Id {
 		log.Printf("user %v is not the owner of the lobby\n", user)
 		return
@@ -106,4 +106,8 @@ func (s *APIServer) handlePacketStartLobby(packet PacketInStartLobby, lobby *Lob
 	if err != nil {
 		log.Printf("error while starting lobby: %v\n", err)
 	}
+}
+
+func (s *APIServer) handlePacketCheck(packet PacketInCheck, lobby *Lobby, user *User) {
+
 }

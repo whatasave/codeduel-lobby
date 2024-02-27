@@ -25,8 +25,12 @@ func UnmarshalPacket(message []byte, packet *any) error {
 		typedPacket = new(PacketInUserStatus)
 	case "startLobby":
 		typedPacket = new(PacketInStartLobby)
+	case "check":
+		typedPacket = new(PacketInCheck)
+	case "submit":
+		typedPacket = new(PacketInSubmit)
 	default:
-		return fmt.Errorf("Unknown message type: %s", packetType.Type)
+		return fmt.Errorf("unknown message type: %s", packetType.Type)
 	}
 
 	if err := json.Unmarshal(message, &typedPacket); err != nil {
@@ -45,8 +49,10 @@ func MarshalPacket(packet any) (any, error) {
 		packetType = "lobby"
 	case PacketOutGameStarted:
 		packetType = "gameStarted"
+	case PacketOutCheckResult:
+		packetType = "checkResult"
 	default:
-		return nil, fmt.Errorf("Unknown packet: %T", packet)
+		return nil, fmt.Errorf("unknown packet: %T", packet)
 	}
 	var m map[string]any
 	p, err := json.Marshal(packet)
@@ -110,6 +116,14 @@ type PacketInStartLobby struct {
 	Start bool `json:"start"`
 }
 
+type PacketInCheck struct {
+	Code string `json:"code"`
+}
+
+type PacketInSubmit struct {
+	Code string `json:"code"`
+}
+
 type PacketOutLobby struct {
 	LobbyID  string           `json:"id"`
 	Settings Settings         `json:"settings"`
@@ -121,4 +135,12 @@ type PacketOutLobby struct {
 type PacketOutGameStarted struct {
 	StartTime time.Time `json:"startTime"`
 	Challenge Challenge `json:"challenge"`
+}
+
+type PacketOutCheckResult struct {
+	Result []struct {
+		Output     string `json:"output"`
+		Error      string `json:"error"`
+		Terminated bool   `json:"terminated"`
+	}
 }
