@@ -39,5 +39,5 @@ func (r *Runner) Run(code string, input []string) ([]ExecutionResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	return []ExecutionResult{}, nil
+	return result, nil
 }
