@@ -1,11 +1,9 @@
 package codeduel
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -13,9 +11,12 @@ import (
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/xedom/codeduel-lobby/codeduel/config"
+	"github.com/xedom/codeduel-lobby/codeduel/utils"
 )
 
 type APIServer struct {
+	Config            *config.Config
 	Addr              string
 	Lobbies           map[string]*Lobby
 	ReadHeaderTimeout time.Duration
@@ -29,10 +30,12 @@ type VerifyTokenResponse struct {
 	Expires_at string `json:"expires_at"`
 }
 
-func NewAPIServer(addr string, lobbies map[string]*Lobby) *APIServer {
-	log.Print("[API] Starting API server on ", addr)
+func NewAPIServer(config *config.Config, lobbies map[string]*Lobby) *APIServer {
+	address := fmt.Sprintf("%s:%s", config.Host, config.Port)
+	log.Print("[API] Starting API server on http://", address)
 	return &APIServer{
-		Addr:              addr,
+		Config:            config,
+		Addr:              address,
 		Lobbies:           lobbies,
 		ReadHeaderTimeout: 3 * time.Second,
 	}
@@ -194,36 +197,17 @@ func GetUser(request *http.Request) (*User, error) {
 	}, nil
 }
 
-func verifyJwt(jwt string) (*VerifyTokenResponse, error) {
-	requestURL := "http://localhost:5000/api/v1/validateToken"
-	requestBodyMap := map[string]string{
-		"token": jwt,
-	}
-	requestBody, err := json.Marshal(requestBodyMap)
-	if err != nil {
-		return nil, err
-	}
-	req, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(requestBody))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("invalid token")
-	}
-
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
+func (s *APIServer) verifyJwt(jwt string) (*VerifyTokenResponse, error) {
+	backendApiKey := s.Config.BackendAPIKey
+	requestURL := fmt.Sprintf("%s/v1/validateToken", s.Config.BackendURL)
+	requestBodyMap := map[string]string{ "token": jwt }
 	verifyTokenResponse := &VerifyTokenResponse{}
-	json.Unmarshal(respBody, &verifyTokenResponse)
 
-	return verifyTokenResponse, nil
+	err := utils.HttpPost(requestURL, map[string]string{
+		"Accept": "application/json",
+		"Content-Type": "application/json",
+		"Authorization": fmt.Sprintf("Bearer %s", backendApiKey),
+	}, requestBodyMap, verifyTokenResponse)
+	
+	return verifyTokenResponse, err
 }

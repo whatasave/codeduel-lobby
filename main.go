@@ -1,20 +1,27 @@
 package main
 
 import (
-	"flag"
 	"log"
 
+	"github.com/joho/godotenv"
 	"github.com/xedom/codeduel-lobby/codeduel"
+	"github.com/xedom/codeduel-lobby/codeduel/config"
+	"github.com/xedom/codeduel-lobby/codeduel/utils"
 )
 
 var lobbies = make(map[string]*codeduel.Lobby)
 
-var addr = flag.String("addr", ":8080", "http service address")
+// var addr = flag.String("addr", ":8080", "http service address")
 
 func main() {
-	flag.Parse()
-	log.Printf("starting server on addr http://%s\n", *addr)
+  // loading env only if not in production
+	if utils.GetEnv("ENV", "development") != "production" {
+		if err := godotenv.Load(); err != nil {
+		log.Println("[MAIN] Error loading .env file")
+		}
+	}
+	config := config.LoadConfig()
 
-	server := codeduel.NewAPIServer(*addr, lobbies)
+	server := codeduel.NewAPIServer(config, lobbies)
 	server.Run()
 }
