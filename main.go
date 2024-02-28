@@ -14,14 +14,14 @@ var lobbies = make(map[string]*codeduel.Lobby)
 // var addr = flag.String("addr", ":8080", "http service address")
 
 func main() {
-  // loading env only if not in production
+	// loading env only if not in production
 	if utils.GetEnv("ENV", "development") != "production" {
 		if err := godotenv.Load(); err != nil {
-		log.Println("[MAIN] Error loading .env file")
+			log.Println("[MAIN] Error loading .env file")
 		}
 	}
 	config := config.LoadConfig()
-
-	server := codeduel.NewAPIServer(config, lobbies)
+	runner := codeduel.NewRunner(config.RunnerURL)
+	server := codeduel.NewAPIServer(config, lobbies, &runner)
 	server.Run()
 }

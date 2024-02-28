@@ -138,9 +138,5 @@ type PacketOutGameStarted struct {
 }
 
 type PacketOutCheckResult struct {
-	Result []struct {
-		Output     string `json:"output"`
-		Error      string `json:"error"`
-		Terminated bool   `json:"terminated"`
-	}
+	Result []ExecutionResult `json:"result"`
 }

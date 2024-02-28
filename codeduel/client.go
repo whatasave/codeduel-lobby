@@ -109,5 +109,18 @@ func (s *APIServer) handlePacketStartLobby(_ PacketInStartLobby, lobby *Lobby, u
 }
 
 func (s *APIServer) handlePacketCheck(packet PacketInCheck, lobby *Lobby, user *User) {
-
+	state, ok := lobby.State.(GameLobbyState)
+	if !ok {
+		log.Printf("lobby is not in game state\n")
+		return
+	}
+	input := []string{}
+	for _, testCase := range state.Challenge.TestCases {
+		input = append(input, testCase.Input)
+	}
+	result, err := s.Runner.Run(packet.Code, input)
+	if err != nil {
+		log.Printf("error while running code: %v\n", err)
+	}
+	SendPacket(user.Connection, PacketOutCheckResult{Result: result})
 }

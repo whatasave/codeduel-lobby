@@ -3,6 +3,8 @@ package codeduel
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 )
 
@@ -12,7 +14,7 @@ type Runner struct {
 
 type ExecutionResult struct {
 	Output     string `json:"output"`
-	Error      string `json:"error"`
+	Error      string `json:"errors"`
 	Terminated bool   `json:"terminated"`
 }
 
@@ -34,8 +36,23 @@ func (r *Runner) Run(code string, input []string) ([]ExecutionResult, error) {
 		return nil, err
 	}
 	defer response.Body.Close()
+	bytes, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+	var errorResult struct {
+		Error   bool   `json:"error"`
+		Message string `json:"message"`
+	}
+	err = json.Unmarshal(bytes, &errorResult)
+	if err != nil {
+		return nil, err
+	}
+	if errorResult.Error {
+		return nil, fmt.Errorf(errorResult.Message)
+	}
 	var result []ExecutionResult
-	err = json.NewDecoder(response.Body).Decode(&result)
+	err = json.Unmarshal(bytes, &result)
 	if err != nil {
 		return nil, err
 	}
