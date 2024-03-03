@@ -118,7 +118,7 @@ func (s *APIServer) handlePacketCheck(packet PacketInCheck, lobby *Lobby, user *
 	for _, testCase := range state.Challenge.TestCases {
 		input = append(input, testCase.Input)
 	}
-	result, err := s.Runner.Run(packet.Code, input)
+	result, err := s.Runner.Run(packet.Language, packet.Code, input)
 	if err != nil {
 		log.Printf("error while running code: %v\n", err)
 	}

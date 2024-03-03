@@ -117,11 +117,13 @@ type PacketInStartLobby struct {
 }
 
 type PacketInCheck struct {
-	Code string `json:"code"`
+	Code     string `json:"code"`
+	Language string `json:"language"`
 }
 
 type PacketInSubmit struct {
-	Code string `json:"code"`
+	Code     string `json:"code"`
+	Language string `json:"language"`
 }
 
 type PacketOutLobby struct {

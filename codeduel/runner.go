@@ -12,6 +12,10 @@ type Runner struct {
 	url string
 }
 
+type ApiResult struct {
+	Result []ExecutionResult `json:"result"`
+}
+
 type ExecutionResult struct {
 	Output     string `json:"output"`
 	Error      string `json:"errors"`
@@ -22,13 +26,15 @@ func NewRunner(url string) Runner {
 	return Runner{url}
 }
 
-func (r *Runner) Run(code string, input []string) ([]ExecutionResult, error) {
+func (r *Runner) Run(language, code string, input []string) ([]ExecutionResult, error) {
 	raw, _ := json.Marshal(struct {
-		Code  string   `json:"code"`
-		Input []string `json:"input"`
+		Language string   `json:"language"`
+		Code     string   `json:"code"`
+		Input    []string `json:"input"`
 	}{
-		Code:  code,
-		Input: input,
+		Language: language,
+		Code:     code,
+		Input:    input,
 	})
 	body := bytes.NewBuffer(raw)
 	response, err := http.Post(r.url+"/api/v1/run", "application/json", body)
@@ -40,9 +46,12 @@ func (r *Runner) Run(code string, input []string) ([]ExecutionResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	var errorResult struct {
+	errorResult := struct {
 		Error   bool   `json:"error"`
 		Message string `json:"message"`
+	}{
+		Error:   false,
+		Message: "",
 	}
 	err = json.Unmarshal(bytes, &errorResult)
 	if err != nil {
@@ -51,10 +60,10 @@ func (r *Runner) Run(code string, input []string) ([]ExecutionResult, error) {
 	if errorResult.Error {
 		return nil, fmt.Errorf(errorResult.Message)
 	}
-	var result []ExecutionResult
+	var result ApiResult
 	err = json.Unmarshal(bytes, &result)
 	if err != nil {
 		return nil, err
 	}
-	return result, nil
+	return result.Result, nil
 }

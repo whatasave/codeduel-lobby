@@ -54,8 +54,8 @@ func NewLobby(owner *User) Lobby {
 		Users: map[UserId]*User{owner.Id: owner},
 		Settings: Settings{
 			MaxPlayers:       8,
-			GameDuration:     time.Second * 30, // time.Minute * 15,
-			AllowedLanguages: []string{"typescript", "python"},
+			GameDuration:     time.Minute * 15, // time.Minute * 15,
+			AllowedLanguages: []string{"javascript", "python"},
 		},
 		State: PreLobbyState{
 			Type:  "preLobby",
