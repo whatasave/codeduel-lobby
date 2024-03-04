@@ -140,5 +140,6 @@ type PacketOutGameStarted struct {
 }
 
 type PacketOutCheckResult struct {
+	Error  *string           `json:"error"`
 	Result []ExecutionResult `json:"result"`
 }

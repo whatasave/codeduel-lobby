@@ -2,6 +2,7 @@ package codeduel
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -120,7 +121,9 @@ func (s *APIServer) handlePacketCheck(packet PacketInCheck, lobby *Lobby, user *
 	}
 	result, err := s.Runner.Run(packet.Language, packet.Code, input)
 	if err != nil {
-		log.Printf("error while running code: %v\n", err)
+		error := fmt.Sprintf("error while running code: %v", err)
+		log.Println(error)
+		SendPacket(user.Connection, PacketOutCheckResult{Error: &error, Result: result})
 	}
 	SendPacket(user.Connection, PacketOutCheckResult{Result: result})
 }
