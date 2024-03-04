@@ -17,9 +17,9 @@ type ApiResult struct {
 }
 
 type ExecutionResult struct {
-	Output     string `json:"output"`
-	Error      string `json:"errors"`
-	Terminated bool   `json:"terminated"`
+	Output string `json:"output"`
+	Error  string `json:"errors"`
+	Status int64  `json:"status"`
 }
 
 func NewRunner(url string) Runner {
