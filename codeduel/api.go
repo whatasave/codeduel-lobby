@@ -46,6 +46,7 @@ func NewAPIServer(config *config.Config, lobbies map[string]*Lobby, runner *Runn
 func (s *APIServer) Run() {
 	router := mux.NewRouter()
 
+	router.HandleFunc("/health", s.healthcheck)
 	router.HandleFunc("/create", s.createLobby)
 	router.HandleFunc("/lobbies", s.getAllLobbies)
 	router.HandleFunc("/join/{lobby}", s.joinLobby)
@@ -61,6 +62,13 @@ func (s *APIServer) Run() {
 	if err != nil {
 		log.Fatal("[API] Cannot start http server: ", err)
 	}
+}
+
+func (s *APIServer) healthcheck(response http.ResponseWriter, request *http.Request) {
+	fmt.Println("healthcheck")
+	response.Header().Add("Content-Type", "application/json")
+	response.WriteHeader(http.StatusOK)
+	json.NewEncoder(response).Encode(map[string]string{"status": "ok"})
 }
 
 func (s *APIServer) createLobby(response http.ResponseWriter, request *http.Request) {
