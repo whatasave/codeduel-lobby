@@ -3,7 +3,7 @@ DOCKERHUB_USERNAME=xedom
 DOCKER_IMAGE_NAME=codeduel-lobby
 DOCKER_CONTAINER_NAME=codeduel-lobby
 PORT=5010
-ENV_FILE=.env
+ENV_FILE=.env.docker
 
 build:
 	go build -o ./bin/$(BINARY_NAME) -v
