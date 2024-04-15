@@ -55,7 +55,7 @@ func NewLobby(owner *User) Lobby {
 		Settings: Settings{
 			MaxPlayers:       8,
 			GameDuration:     time.Minute * 15, // time.Minute * 15,
-			AllowedLanguages: []string{"javascript", "python"},
+			AllowedLanguages: []string{"javascript", "python", "csharp"}, //TODO: add API call
 		},
 		State: PreLobbyState{
 			Type:  "preLobby",
