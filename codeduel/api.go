@@ -27,7 +27,7 @@ type VerifyTokenResponse struct {
 	Id         int32  `json:"id"`
 	Username   string `json:"username"`
 	Email      string `json:"email"`
-	Image_url  string `json:"image_url"`
+	Avatar  string `json:"avatar"`
 	Expires_at string `json:"expires_at"`
 }
 
@@ -193,7 +193,7 @@ func GetUser(request *http.Request) (*User, error) {
 	// 	Id:             UserId(verifyTokenResponse.Id),
 	// 	Username:       verifyTokenResponse.Username,
 	// 	Email:          verifyTokenResponse.Email,
-	// 	Avatar:         verifyTokenResponse.Image_url,
+	// 	Avatar:         verifyTokenResponse.Avatar,
 	// 	Token:          cookie.Value,
 	// 	TokenExpiresAt: verifyTokenResponse.Expires_at,
 	// }, nil
