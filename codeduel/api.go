@@ -24,11 +24,11 @@ type APIServer struct {
 }
 
 type VerifyTokenResponse struct {
-	Id         int32  `json:"id"`
+	ID         int32  `json:"id"`
 	Username   string `json:"username"`
 	Email      string `json:"email"`
-	Avatar  string `json:"avatar"`
-	Expires_at string `json:"expires_at"`
+	Avatar     string `json:"avatar"`
+	ExpiresAt  int32  `json:"expires_at"`
 }
 
 func NewAPIServer(config *config.Config, lobbies map[string]*Lobby, runner *Runner) *APIServer {
@@ -72,7 +72,7 @@ func (s *APIServer) healthcheck(response http.ResponseWriter, request *http.Requ
 }
 
 func (s *APIServer) createLobby(response http.ResponseWriter, request *http.Request) {
-	user, err := GetUser(request)
+	user, err := s.GetUser(request)
 	fmt.Println("user: ", user)
 	if err != nil {
 		RejectConnection(response, request, Unauthorized, err.Error())
@@ -88,7 +88,7 @@ func (s *APIServer) createLobby(response http.ResponseWriter, request *http.Requ
 }
 
 func (s *APIServer) joinLobby(response http.ResponseWriter, request *http.Request) {
-	user, err := GetUser(request)
+	user, err := s.GetUser(request)
 	if err != nil {
 		RejectConnection(response, request, Unauthorized, err.Error())
 		return
@@ -114,7 +114,7 @@ func (s *APIServer) joinLobby(response http.ResponseWriter, request *http.Reques
 }
 
 func (s *APIServer) connectLobby(response http.ResponseWriter, request *http.Request) {
-	user, err := GetUser(request)
+	user, err := s.GetUser(request)
 	if err != nil {
 		RejectConnection(response, request, Unauthorized, err.Error())
 		return
@@ -176,39 +176,41 @@ func (s *APIServer) getAllLobbies(response http.ResponseWriter, request *http.Re
 	}
 }
 
-func GetUser(request *http.Request) (*User, error) {
+func (s *APIServer) GetUser(request *http.Request) (*User, error) {
 	cookie, err := request.Cookie("jwt")
 	if err != nil {
 		return nil, errors.New("missing jwt cookie")
 	}
-	id, err := strconv.Atoi(cookie.Value)
+	// id, err := strconv.Atoi(cookie.Value)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// return &User{
+	// 	Id:             UserId(id),
+	// 	Username:       cookie.Value,
+	// 	Email:          cookie.Value,
+	// 	Avatar:         cookie.Value,
+	// 	Token:          cookie.Value,
+	// 	TokenExpiresAt: cookie.Value,
+	// }, nil
+
+	// TODO: validate jwt calling codeduel-be
+	verifyTokenResponse, err := s.verifyJwt(cookie.Value)
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO: validate jwt calling codeduel-be
-	// verifyTokenResponse, err := verifyJwt(cookie.Value)
-
-	// return &User{
-	// 	Id:             UserId(verifyTokenResponse.Id),
-	// 	Username:       verifyTokenResponse.Username,
-	// 	Email:          verifyTokenResponse.Email,
-	// 	Avatar:         verifyTokenResponse.Avatar,
-	// 	Token:          cookie.Value,
-	// 	TokenExpiresAt: verifyTokenResponse.Expires_at,
-	// }, nil
 	return &User{
-		Id:             UserId(id),
-		Username:       cookie.Value,
-		Email:          cookie.Value,
-		Avatar:         cookie.Value,
+		Id:             UserId(verifyTokenResponse.ID),
+		Username:       verifyTokenResponse.Username,
+		Email:          verifyTokenResponse.Email,
+		Avatar:         verifyTokenResponse.Avatar,
 		Token:          cookie.Value,
-		TokenExpiresAt: cookie.Value,
+		TokenExpiresAt: verifyTokenResponse.ExpiresAt,
 	}, nil
 }
 
 func (s *APIServer) verifyJwt(jwt string) (*VerifyTokenResponse, error) {
-	backendApiKey := s.Config.BackendAPIKey
 	requestURL := fmt.Sprintf("%s/v1/validateToken", s.Config.BackendURL)
 	requestBodyMap := map[string]string{"token": jwt}
 	verifyTokenResponse := &VerifyTokenResponse{}
@@ -216,8 +218,8 @@ func (s *APIServer) verifyJwt(jwt string) (*VerifyTokenResponse, error) {
 	err := utils.HttpPost(requestURL, map[string]string{
 		"Accept":        "application/json",
 		"Content-Type":  "application/json",
-		"Authorization": fmt.Sprintf("Bearer %s", backendApiKey),
+		"Authorization": fmt.Sprintf("Bearer %s", s.Config.BackendAPIKey),
 	}, requestBodyMap, verifyTokenResponse)
-
+	
 	return verifyTokenResponse, err
 }
