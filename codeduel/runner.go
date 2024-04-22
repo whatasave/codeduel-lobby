@@ -26,6 +26,40 @@ func NewRunner(url string) Runner {
 	return Runner{url}
 }
 
+func (r *Runner) AvailableLanguages() ([]string, error) {
+	response, err := http.Get(r.url + "/api/v1/languages")
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+	bytes, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+	errorResult := struct {
+		Error   bool   `json:"error"`
+		Message string `json:"message"`
+	}{
+		Error:   false,
+		Message: "",
+	}
+	err = json.Unmarshal(bytes, &errorResult)
+	if err != nil {
+		return nil, err
+	}
+	if errorResult.Error {
+		return nil, fmt.Errorf(errorResult.Message)
+	}
+	var result struct {
+		Languages []string `json:"languages"`
+	}
+	err = json.Unmarshal(bytes, &result)
+	if err != nil {
+		return nil, err
+	}
+	return result.Languages, nil
+}
+
 func (r *Runner) Run(language, code string, input []string) ([]ExecutionResult, error) {
 	raw, _ := json.Marshal(struct {
 		Language string   `json:"language"`

@@ -70,7 +70,12 @@ func (s *APIServer) createLobby(response http.ResponseWriter, request *http.Requ
 		RejectConnection(response, request, Unauthorized, err.Error())
 		return
 	}
-	lobby := NewLobby(user)
+	languages, err := s.Runner.AvailableLanguages()
+	if err != nil {
+		RejectConnection(response, request, InternalServerError, "cannot contact runner")
+		return
+	}
+	lobby := NewLobby(user, languages)
 	s.Lobbies[lobby.Id] = &lobby
 	_, err = s.StartWebSocket(response, request, &lobby, user)
 	if err != nil {

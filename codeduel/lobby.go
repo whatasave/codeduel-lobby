@@ -47,15 +47,15 @@ type TestCase struct {
 	Output string `json:"output"`
 }
 
-func NewLobby(owner *User) Lobby {
+func NewLobby(owner *User, allowedLanguages []string) Lobby {
 	return Lobby{
 		Id:    uuid.NewString(),
 		Owner: owner,
 		Users: map[UserId]*User{owner.Id: owner},
 		Settings: Settings{
 			MaxPlayers:       8,
-			GameDuration:     time.Minute * 15, // time.Minute * 15,
-			AllowedLanguages: []string{"javascript", "python"},
+			GameDuration:     time.Minute * 15,
+			AllowedLanguages: allowedLanguages,
 		},
 		State: PreLobbyState{
 			Type:  "preLobby",
