@@ -24,11 +24,11 @@ type APIServer struct {
 }
 
 type VerifyTokenResponse struct {
-	Id         int32  `json:"id"`
-	Username   string `json:"username"`
-	Email      string `json:"email"`
-	Image_url  string `json:"image_url"`
-	Expires_at string `json:"expires_at"`
+	Id        int32  `json:"id"`
+	Username  string `json:"username"`
+	Email     string `json:"email"`
+	ImageUrl  string `json:"image_url"`
+	ExpiresAt string `json:"expires_at"`
 }
 
 func NewAPIServer(config *config.Config, lobbies map[string]*Lobby, runner *Runner) *APIServer {
@@ -67,19 +67,19 @@ func (s *APIServer) createLobby(response http.ResponseWriter, request *http.Requ
 	user, err := GetUser(request)
 	fmt.Println("user: ", user)
 	if err != nil {
-		RejectConnection(response, request, Unauthorized, err.Error())
+		_ = RejectConnection(response, request, Unauthorized, err.Error())
 		return
 	}
 	languages, err := s.Runner.AvailableLanguages()
 	if err != nil {
-		RejectConnection(response, request, InternalServerError, "cannot contact runner")
+		_ = RejectConnection(response, request, InternalServerError, "cannot contact runner")
 		return
 	}
 	lobby := NewLobby(user, languages)
 	s.Lobbies[lobby.Id] = &lobby
 	_, err = s.StartWebSocket(response, request, &lobby, user)
 	if err != nil {
-		RejectConnection(response, request, InternalServerError, "cannot start websocket connection")
+		_ = RejectConnection(response, request, InternalServerError, "cannot start websocket connection")
 		return
 	}
 }
@@ -87,7 +87,7 @@ func (s *APIServer) createLobby(response http.ResponseWriter, request *http.Requ
 func (s *APIServer) joinLobby(response http.ResponseWriter, request *http.Request) {
 	user, err := GetUser(request)
 	if err != nil {
-		RejectConnection(response, request, Unauthorized, err.Error())
+		_ = RejectConnection(response, request, Unauthorized, err.Error())
 		return
 	}
 	lobbyId := mux.Vars(request)["lobby"]
@@ -105,7 +105,7 @@ func (s *APIServer) joinLobby(response http.ResponseWriter, request *http.Reques
 	}
 	_, err = s.StartWebSocket(response, request, lobby, user)
 	if err != nil {
-		RejectConnection(response, request, InternalServerError, "cannot start websocket connection")
+		_ = RejectConnection(response, request, InternalServerError, "cannot start websocket connection")
 		return
 	}
 }
@@ -113,27 +113,27 @@ func (s *APIServer) joinLobby(response http.ResponseWriter, request *http.Reques
 func (s *APIServer) connectLobby(response http.ResponseWriter, request *http.Request) {
 	user, err := GetUser(request)
 	if err != nil {
-		RejectConnection(response, request, Unauthorized, err.Error())
+		_ = RejectConnection(response, request, Unauthorized, err.Error())
 		return
 	}
 	lobbyId := mux.Vars(request)["lobby"]
 	lobby, ok := s.Lobbies[lobbyId]
 	if !ok {
-		RejectConnection(response, request, NotFound, "lobby not found")
+		_ = RejectConnection(response, request, NotFound, "lobby not found")
 		return
 	}
 	if user := lobby.GetUser(user); user == nil {
-		RejectConnection(response, request, Forbidden, "user not in lobby")
+		_ = RejectConnection(response, request, Forbidden, "user not in lobby")
 		return
 	}
 	_, err = s.StartWebSocket(response, request, lobby, user)
 	if err != nil {
-		RejectConnection(response, request, InternalServerError, "cannot start websocket connection")
+		_ = RejectConnection(response, request, InternalServerError, "cannot start websocket connection")
 		return
 	}
 }
 
-func (s *APIServer) getAllLobbies(response http.ResponseWriter, request *http.Request) {
+func (s *APIServer) getAllLobbies(response http.ResponseWriter, _ *http.Request) {
 	type lobbyListType struct {
 		Id         string `json:"id"`
 		Owner      *User  `json:"owner"`
@@ -167,7 +167,7 @@ func (s *APIServer) getAllLobbies(response http.ResponseWriter, request *http.Re
 	response.WriteHeader(http.StatusOK)
 	err := json.NewEncoder(response).Encode(lobbyList)
 	if err != nil {
-		log.Fatalf("[API] error with encoding lobbies into json: %v", err.Error())
+		_ = fmt.Errorf("[API] error with encoding lobbies into json: %v", err)
 		response.WriteHeader(http.StatusInternalServerError)
 		return
 	}

@@ -3,11 +3,9 @@ package codeduel
 import (
 	"context"
 	"fmt"
+	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
-	"time"
-
-	"github.com/gorilla/websocket"
 )
 
 const (
@@ -19,7 +17,6 @@ const (
 )
 
 const (
-	writeWait      = 10 * time.Second
 	maxMessageSize = 1024
 )
 
@@ -46,35 +43,44 @@ func (s *APIServer) StartWebSocket(response http.ResponseWriter, request *http.R
 	if err != nil {
 		return nil, err
 	}
-	go s.handleClient(connection, lobby, user)
+	go func() {
+		err := s.handleClient(connection, lobby, user)
+		if err != nil {
+			_ = fmt.Errorf(err.Error())
+		}
+	}()
 	return connection, nil
 }
 
-func (s *APIServer) handleClient(connection *websocket.Conn, lobby *Lobby, user *User) {
-	defer connection.Close()
+func (s *APIServer) handleClient(connection *websocket.Conn, lobby *Lobby, user *User) error {
 	connection.SetReadLimit(maxMessageSize)
 	user.Connection = connection
-	SendPacket(connection, PacketOutLobby{
+	err := SendPacket(connection, PacketOutLobby{
 		LobbyID:  lobby.Id,
 		Settings: lobby.Settings,
 		Owner:    lobby.Owner,
 		Users:    lobby.Users,
 		State:    lobby.State,
 	})
+	if err != nil {
+		return fmt.Errorf("error sending lobby packet: %v", err)
+
+	}
 	for {
 		var packet any
 		err := ReadPacket(connection, &packet)
 		if err != nil {
 			log.Printf("error while reading packet: %v\n", err)
 			closeMessage := websocket.FormatCloseMessage(Timeout, "connection timed out")
-			connection.WriteMessage(websocket.CloseMessage, closeMessage)
+			_ = connection.WriteMessage(websocket.CloseMessage, closeMessage)
 			break
 		}
-		s.handlePacket(packet, lobby, user)
+		_ = s.handlePacket(packet, lobby, user)
 	}
+	return connection.Close()
 }
 
-func (s *APIServer) handlePacket(packet any, lobby *Lobby, user *User) {
+func (s *APIServer) handlePacket(packet any, lobby *Lobby, user *User) error {
 	switch packet := packet.(type) {
 	case *PacketInSettings:
 		s.handlePacketSettings(*packet, lobby, user)
@@ -83,8 +89,9 @@ func (s *APIServer) handlePacket(packet any, lobby *Lobby, user *User) {
 	case *PacketInStartLobby:
 		s.handlePacketStartLobby(*packet, lobby, user)
 	case *PacketInCheck:
-		s.handlePacketCheck(*packet, lobby, user)
+		return s.handlePacketCheck(*packet, lobby, user)
 	}
+	return nil
 }
 
 func (s *APIServer) handlePacketSettings(packet PacketInSettings, lobby *Lobby, _ *User) {
@@ -103,27 +110,26 @@ func (s *APIServer) handlePacketStartLobby(_ PacketInStartLobby, lobby *Lobby, u
 		log.Printf("user %v is not the owner of the lobby\n", user)
 		return
 	}
-	err := s.startLobby(lobby, context.Background())
+	err := s.StartLobby(lobby, context.Background())
 	if err != nil {
 		log.Printf("error while starting lobby: %v\n", err)
 	}
 }
 
-func (s *APIServer) handlePacketCheck(packet PacketInCheck, lobby *Lobby, user *User) {
-	state, ok := lobby.State.(GameLobbyState)
-	if !ok {
-		log.Printf("lobby is not in game state\n")
-		return
-	}
-	input := []string{}
-	for _, testCase := range state.Challenge.TestCases {
-		input = append(input, testCase.Input)
-	}
-	result, err := s.Runner.Run(packet.Language, packet.Code, input)
+func (s *APIServer) handlePacketCheck(packet PacketInCheck, lobby *Lobby, user *User) error {
+	result, err := lobby.RunTest(user, s.Runner, packet.Language, packet.Code)
 	if err != nil {
-		error := fmt.Sprintf("error while running code: %v", err)
-		log.Println(error)
-		SendPacket(user.Connection, PacketOutCheckResult{Error: &error, Result: result})
+		stringErr := fmt.Sprintf("err while running code: %v", err)
+		return SendPacket(user.Connection, PacketOutCheckResult{Error: &stringErr, Result: result})
 	}
-	SendPacket(user.Connection, PacketOutCheckResult{Result: result})
+	return SendPacket(user.Connection, PacketOutCheckResult{Result: result})
+}
+
+func (s *APIServer) handlePacketSubmit(packet PacketInCheck, lobby *Lobby, user *User) error {
+	result, err := lobby.Submit(user, s.Runner, packet.Language, packet.Code)
+	if err != nil {
+		stringErr := fmt.Sprintf("err while running code: %v", err)
+		return SendPacket(user.Connection, PacketOutSubmitResult{Error: &stringErr, Result: result})
+	}
+	return SendPacket(user.Connection, PacketOutSubmitResult{Result: result})
 }

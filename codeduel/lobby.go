@@ -29,10 +29,21 @@ type PreLobbyState struct {
 }
 
 type GameLobbyState struct {
-	Type      string                  `json:"type"`
-	Challenge Challenge               `json:"challenge"`
-	StartTime time.Time               `json:"startTime"`
-	context   context.CancelCauseFunc `json:"-"`
+	Type       string                        `json:"type"`
+	Challenge  Challenge                     `json:"challenge"`
+	StartTime  time.Time                     `json:"startTime"`
+	UsersState map[UserId]UserGameLobbyState `json:"usersState"`
+	context    context.CancelCauseFunc
+}
+
+type UserGameLobbyState struct {
+	LastRunResult *RunResult `json:"lastRunResult"`
+	SubmitResult  *RunResult `json:"submitResult"`
+}
+
+type RunResult struct {
+	Results []ExecutionResult `json:"results"`
+	Date    time.Time         `json:"date"`
 }
 
 type Challenge struct {
@@ -64,12 +75,12 @@ func NewLobby(owner *User, allowedLanguages []string) Lobby {
 	}
 }
 
-func (lobby *Lobby) CannotJoin(user *User) error {
+func (lobby *Lobby) CannotJoin(_ *User) error {
 	if _, ok := lobby.State.(PreLobbyState); !ok {
-		return fmt.Errorf("Lobby is not in PreLobby")
+		return fmt.Errorf("lobby is not in PreLobby")
 	}
 	if len(lobby.Users) >= lobby.Settings.MaxPlayers {
-		return fmt.Errorf("Lobby is full")
+		return fmt.Errorf("lobby is full")
 	}
 	return nil
 }
@@ -98,8 +109,57 @@ func (lobby *Lobby) SetState(user *User, state string) error {
 		}
 		return nil
 	} else {
-		return fmt.Errorf("Lobby is not in PreLobby")
+		return fmt.Errorf("lobby is not in PreLobby")
 	}
+}
+
+func (lobby *Lobby) RunTest(user *User, runner *Runner, language string, code string) ([]ExecutionResult, error) {
+	state, ok := lobby.State.(GameLobbyState)
+	if !ok {
+		return nil, fmt.Errorf("lobby is not in game state")
+	}
+	var input []string
+	for _, testCase := range state.Challenge.TestCases {
+		input = append(input, testCase.Input)
+	}
+	result, err := runner.Run(language, code, input)
+	if err != nil {
+		return nil, fmt.Errorf("error while running code: %v", err)
+	}
+	state.UsersState[user.Id] = UserGameLobbyState{
+		LastRunResult: &RunResult{
+			Results: result,
+			Date:    time.Now(),
+		},
+		SubmitResult: state.UsersState[user.Id].SubmitResult,
+	}
+	return result, nil
+}
+
+func (lobby *Lobby) Submit(user *User, runner *Runner, language string, code string) ([]ExecutionResult, error) {
+	state, ok := lobby.State.(GameLobbyState)
+	if !ok {
+		return nil, fmt.Errorf("lobby is not in game state")
+	}
+	if state.UsersState[user.Id].SubmitResult != nil {
+		return nil, fmt.Errorf("submit result is already set")
+	}
+	var input []string
+	for _, testCase := range state.Challenge.HiddenTestCases {
+		input = append(input, testCase.Input)
+	}
+	result, err := runner.Run(language, code, input)
+	if err != nil {
+		return nil, fmt.Errorf("error while running code: %v", err)
+	}
+	state.UsersState[user.Id] = UserGameLobbyState{
+		LastRunResult: state.UsersState[user.Id].LastRunResult,
+		SubmitResult: &RunResult{
+			Results: result,
+			Date:    time.Now(),
+		},
+	}
+	return result, nil
 }
 
 func GetStateType(state any) string {
@@ -113,23 +173,22 @@ func GetStateType(state any) string {
 	}
 }
 
-func (s *APIServer) startLobby(lobby *Lobby, ctx context.Context) error {
-	if _, ok := lobby.State.(PreLobbyState); ok {
-		ctx, cancel := context.WithCancelCause(ctx)
-		lobby.State = GameLobbyState{
-			Type:      "game",
-			Challenge: RandomChallenge(),
-			StartTime: time.Now(),
-			context:   cancel,
-		}
-		go s.handleGame(lobby, ctx)
-		return nil
-	} else {
-		return fmt.Errorf("Lobby is not in PreLobby")
+func (s *APIServer) StartLobby(lobby *Lobby, ctx context.Context) error {
+	if _, ok := lobby.State.(PreLobbyState); !ok {
+		return fmt.Errorf("lobby is not in PreLobby")
 	}
+	ctx, cancel := context.WithCancelCause(ctx)
+	lobby.State = GameLobbyState{
+		Type:      "game",
+		Challenge: RandomChallenge(),
+		StartTime: time.Now(),
+		context:   cancel,
+	}
+	go s.HandleGame(lobby, ctx)
+	return nil
 }
 
-func (s *APIServer) handleGame(lobby *Lobby, ctx context.Context) {
+func (s *APIServer) HandleGame(lobby *Lobby, ctx context.Context) {
 	state := lobby.State.(GameLobbyState)
 	lobby.BroadcastPacket(PacketOutGameStarted{
 		state.StartTime,

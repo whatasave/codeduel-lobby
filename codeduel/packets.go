@@ -51,6 +51,8 @@ func MarshalPacket(packet any) (any, error) {
 		packetType = "gameStarted"
 	case PacketOutCheckResult:
 		packetType = "checkResult"
+	case PacketOutSubmitResult:
+		packetType = "submitResult"
 	default:
 		return nil, fmt.Errorf("unknown packet: %T", packet)
 	}
@@ -140,6 +142,11 @@ type PacketOutGameStarted struct {
 }
 
 type PacketOutCheckResult struct {
+	Error  *string           `json:"error"`
+	Result []ExecutionResult `json:"result"`
+}
+
+type PacketOutSubmitResult struct {
 	Error  *string           `json:"error"`
 	Result []ExecutionResult `json:"result"`
 }
