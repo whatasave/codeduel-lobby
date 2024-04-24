@@ -21,6 +21,8 @@ RUN go test -v ./...
 FROM gcr.io/distroless/base-debian11 AS release-stage
 ENV ENV=production
 
+ENV ENV=production
+
 COPY --from=build-stage /usr/src/app/bin /usr/local/bin
 COPY --from=build-stage /etc/passwd /etc/passwd
 
