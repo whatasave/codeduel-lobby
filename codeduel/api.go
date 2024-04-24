@@ -27,8 +27,8 @@ type VerifyTokenResponse struct {
 	Id        int32  `json:"id"`
 	Username  string `json:"username"`
 	Email     string `json:"email"`
-	ImageUrl  string `json:"image_url"`
-	ExpiresAt string `json:"expires_at"`
+	Avatar    string `json:"avatar"`
+	ExpiresAt int64  `json:"expires_at"`
 }
 
 func NewAPIServer(config *config.Config, lobbies map[string]*Lobby, runner *Runner) *APIServer {
@@ -206,7 +206,7 @@ func (s *APIServer) GetUser(request *http.Request) (*User, error) {
 	}
 
 	return &User{
-		Id:             UserId(verifyTokenResponse.ID),
+		Id:             UserId(verifyTokenResponse.Id),
 		Username:       verifyTokenResponse.Username,
 		Email:          verifyTokenResponse.Email,
 		Avatar:         verifyTokenResponse.Avatar,
