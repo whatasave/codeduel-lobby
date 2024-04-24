@@ -29,11 +29,12 @@ type PreLobbyState struct {
 }
 
 type GameLobbyState struct {
-	Type       string                        `json:"type"`
-	Challenge  Challenge                     `json:"challenge"`
-	StartTime  time.Time                     `json:"startTime"`
-	UsersState map[UserId]UserGameLobbyState `json:"usersState"`
-	context    context.CancelCauseFunc
+	Type        string                        `json:"type"`
+	Challenge   Challenge                     `json:"challenge"`
+	StartTime   time.Time                     `json:"startTime"`
+	UsersState  map[UserId]UserGameLobbyState `json:"usersState"`
+	SubmitCount int                           `json:"submitCount"`
+	context     context.CancelCauseFunc
 }
 
 type UserGameLobbyState struct {
@@ -98,7 +99,7 @@ func (lobby *Lobby) SetSettings(settings Settings) {
 	lobby.Settings = settings
 }
 
-func (lobby *Lobby) SetState(user *User, state string) error {
+func (lobby *Lobby) SetReadyState(user *User, state string) error {
 	if lobbyState, ok := lobby.State.(PreLobbyState); ok {
 		if state == StatusReady {
 			lobbyState.Ready = append(lobbyState.Ready, user.Id)
@@ -159,6 +160,10 @@ func (lobby *Lobby) Submit(user *User, runner *Runner, language string, code str
 			Date:    time.Now(),
 		},
 	}
+	state.SubmitCount++
+	if state.SubmitCount == len(lobby.Users) {
+		state.context(fmt.Errorf("all users submitted"))
+	}
 	return result, nil
 }
 
@@ -179,10 +184,12 @@ func (s *APIServer) StartLobby(lobby *Lobby, ctx context.Context) error {
 	}
 	ctx, cancel := context.WithCancelCause(ctx)
 	lobby.State = GameLobbyState{
-		Type:      "game",
-		Challenge: RandomChallenge(),
-		StartTime: time.Now(),
-		context:   cancel,
+		Type:        "game",
+		Challenge:   RandomChallenge(),
+		StartTime:   time.Now(),
+		UsersState:  map[UserId]UserGameLobbyState{},
+		SubmitCount: 0,
+		context:     cancel,
 	}
 	go s.HandleGame(lobby, ctx)
 	return nil

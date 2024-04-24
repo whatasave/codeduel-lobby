@@ -3,9 +3,10 @@ package codeduel
 import (
 	"context"
 	"fmt"
-	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
+
+	"github.com/gorilla/websocket"
 )
 
 const (
@@ -99,7 +100,7 @@ func (s *APIServer) handlePacketSettings(packet PacketInSettings, lobby *Lobby, 
 }
 
 func (s *APIServer) handlePacketUserStatus(packet PacketInUserStatus, lobby *Lobby, user *User) {
-	err := lobby.SetState(user, packet.Status)
+	err := lobby.SetReadyState(user, packet.Status)
 	if err != nil {
 		log.Printf("error while setting user state: %v\n", err)
 	}
