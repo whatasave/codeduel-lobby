@@ -91,6 +91,8 @@ func (s *APIServer) handlePacket(packet any, lobby *Lobby, user *User) error {
 		s.handlePacketStartLobby(*packet, lobby, user)
 	case *PacketInCheck:
 		return s.handlePacketCheck(*packet, lobby, user)
+	case *PacketInSubmit:
+		return s.handlePacketSubmit(*packet, lobby, user)
 	}
 	return nil
 }
@@ -126,7 +128,7 @@ func (s *APIServer) handlePacketCheck(packet PacketInCheck, lobby *Lobby, user *
 	return SendPacket(user.Connection, PacketOutCheckResult{Result: result})
 }
 
-func (s *APIServer) handlePacketSubmit(packet PacketInCheck, lobby *Lobby, user *User) error {
+func (s *APIServer) handlePacketSubmit(packet PacketInSubmit, lobby *Lobby, user *User) error {
 	result, err := lobby.Submit(user, s.Runner, packet.Language, packet.Code)
 	if err != nil {
 		stringErr := fmt.Sprintf("err while running code: %v", err)
