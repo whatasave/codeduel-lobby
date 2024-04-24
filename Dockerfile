@@ -1,4 +1,4 @@
-FROM golang:1.21 as build-stage
+FROM golang:1.22 as build-stage
 
 ENV BINARY_NAME=codeduel-lobby
 ENV ENV=production
