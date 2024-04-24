@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/gorilla/handlers"
@@ -65,7 +64,6 @@ func (s *APIServer) Run() {
 }
 
 func (s *APIServer) healthcheck(response http.ResponseWriter, request *http.Request) {
-	fmt.Println("healthcheck")
 	response.Header().Add("Content-Type", "application/json")
 	response.WriteHeader(http.StatusOK)
 	json.NewEncoder(response).Encode(map[string]string{"status": "ok"})
@@ -153,13 +151,6 @@ func (s *APIServer) getAllLobbies(response http.ResponseWriter, _ *http.Request)
 	lobbyList := make([]lobbyListType, 0, len(s.Lobbies))
 
 	for key, lobby := range s.Lobbies {
-
-		lobbyUsers := make([]string, 0, len(lobby.Users))
-
-		for userID := range lobby.Users {
-			lobbyUsers = append(lobbyUsers, strconv.Itoa(int(userID)))
-		}
-
 		lobbyList = append(lobbyList, lobbyListType{
 			Id:         key,
 			Owner:      lobby.Owner,
@@ -168,8 +159,6 @@ func (s *APIServer) getAllLobbies(response http.ResponseWriter, _ *http.Request)
 			State:      GetStateType(lobby.State),
 		})
 	}
-
-	fmt.Printf("lobbies: %v\n", lobbyList)
 
 	response.Header().Add("Content-Type", "application/json")
 	response.WriteHeader(http.StatusOK)
