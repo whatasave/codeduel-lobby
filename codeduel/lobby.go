@@ -43,8 +43,10 @@ type UserGameLobbyState struct {
 }
 
 type RunResult struct {
-	Results []ExecutionResult `json:"results"`
-	Date    time.Time         `json:"date"`
+	Code     string            `json:"code"`
+	Language string            `json:"language"`
+	Results  []ExecutionResult `json:"results"`
+	Date     time.Time         `json:"date"`
 }
 
 type Challenge struct {
