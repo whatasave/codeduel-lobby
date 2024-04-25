@@ -2,6 +2,7 @@ package codeduel
 
 func RandomChallenge() Challenge {
 	return Challenge{
+		Id:    1,
 		Title: "Add Two Numbers",
 		Description: `## Goal
 A complex palindrome is a string that is a palindrome when only its alphanumeric characters are considered and the case of the characters is ignored. The task is to determine whether a given string is a complex palindrome.

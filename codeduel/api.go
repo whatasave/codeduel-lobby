@@ -20,6 +20,7 @@ type APIServer struct {
 	Lobbies           map[string]*Lobby
 	ReadHeaderTimeout time.Duration
 	Runner            *Runner
+	Backend           *Backend
 }
 
 type VerifyTokenResponse struct {
@@ -30,7 +31,7 @@ type VerifyTokenResponse struct {
 	ExpiresAt int64  `json:"expires_at"`
 }
 
-func NewAPIServer(config *config.Config, lobbies map[string]*Lobby, runner *Runner) *APIServer {
+func NewApiServer(config *config.Config, lobbies map[string]*Lobby, runner *Runner, backend *Backend) *APIServer {
 	address := fmt.Sprintf("%s:%s", config.Host, config.Port)
 	log.Print("[API] Starting API server on http://", address)
 	return &APIServer{
@@ -212,7 +213,7 @@ func (s *APIServer) verifyJwt(jwt string) (*VerifyTokenResponse, error) {
 	err := utils.HttpPost(requestURL, map[string]string{
 		"Accept":        "application/json",
 		"Content-Type":  "application/json",
-		"Authorization": fmt.Sprintf("Bearer %s", s.Config.BackendAPIKey),
+		"Authorization": fmt.Sprintf("Bearer %s", s.Config.BackendApiKey),
 	}, requestBodyMap, verifyTokenResponse)
 
 	return verifyTokenResponse, err
