@@ -9,6 +9,7 @@ type User struct {
 	Username       string          `json:"username"`
 	Email          string          `json:"email"`
 	Avatar         string          `json:"avatar"`
+	Role           string          `json:"role"`
 	Token          string          `json:"-"`
 	TokenExpiresAt int64           `json:"-"`
 	Connection     *websocket.Conn `json:"-"`

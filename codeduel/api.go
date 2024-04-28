@@ -27,6 +27,7 @@ type VerifyTokenResponse struct {
 	Username  string `json:"username"`
 	Email     string `json:"email"`
 	Avatar    string `json:"avatar"`
+	Role      string `json:"role"`
 	ExpiresAt int64  `json:"expires_at"`
 }
 
@@ -45,16 +46,16 @@ func NewAPIServer(config *config.Config, lobbies map[string]*Lobby, runner *Runn
 func (s *APIServer) Run() {
 	router := mux.NewRouter()
 
-	router.HandleFunc("/health", s.healthcheck)
+	router.HandleFunc("/health", s.healthCheck)
 	router.HandleFunc("/create", s.createLobby)
 	router.HandleFunc("/lobbies", s.getAllLobbies)
 	router.HandleFunc("/join/{lobby}", s.joinLobby)
 	router.HandleFunc("/connect/{lobby}", s.connectLobby)
 
 	err := http.ListenAndServe(s.Addr, handlers.CORS(
-		handlers.AllowedOrigins([]string{"*"}),
+		handlers.AllowedOrigins([]string{"https://codeduel.it"}),
 		handlers.AllowedMethods([]string{"POST"}),
-		handlers.AllowedHeaders([]string{}),
+		handlers.AllowedHeaders([]string{"Content-Type, x-token"}),
 		handlers.AllowCredentials(),
 	)(router))
 
@@ -63,7 +64,7 @@ func (s *APIServer) Run() {
 	}
 }
 
-func (s *APIServer) healthcheck(response http.ResponseWriter, request *http.Request) {
+func (s *APIServer) healthCheck(response http.ResponseWriter, request *http.Request) {
 	response.Header().Add("Content-Type", "application/json")
 	response.WriteHeader(http.StatusOK)
 	json.NewEncoder(response).Encode(map[string]string{"status": "ok"})
@@ -73,11 +74,13 @@ func (s *APIServer) createLobby(response http.ResponseWriter, request *http.Requ
 	user, err := s.GetUser(request)
 	fmt.Println("user: ", user)
 	if err != nil {
+		log.Printf("[API] error getting user: %v", err)
 		_ = RejectConnection(response, request, Unauthorized, err.Error())
 		return
 	}
 	languages, err := s.Runner.AvailableLanguages()
 	if err != nil {
+		log.Printf("[API] error getting available languages: %v", err)
 		_ = RejectConnection(response, request, InternalServerError, "cannot contact runner")
 		return
 	}
@@ -85,6 +88,7 @@ func (s *APIServer) createLobby(response http.ResponseWriter, request *http.Requ
 	s.Lobbies[lobby.Id] = &lobby
 	_, err = s.StartWebSocket(response, request, &lobby, user)
 	if err != nil {
+		log.Printf("[API] error starting websocket: %v", err)
 		_ = RejectConnection(response, request, InternalServerError, "cannot start websocket connection")
 		return
 	}
@@ -175,20 +179,7 @@ func (s *APIServer) GetUser(request *http.Request) (*User, error) {
 	if err != nil {
 		return nil, errors.New("missing jwt cookie")
 	}
-	// id, err := strconv.Atoi(cookie.Value)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// return &User{
-	// 	Id:             UserId(id),
-	// 	Username:       cookie.Value,
-	// 	Email:          cookie.Value,
-	// 	Avatar:         cookie.Value,
-	// 	Token:          cookie.Value,
-	// 	TokenExpiresAt: cookie.Value,
-	// }, nil
 
-	// TODO: validate jwt calling codeduel-be
 	verifyTokenResponse, err := s.verifyJwt(cookie.Value)
 	if err != nil {
 		return nil, err
@@ -199,6 +190,7 @@ func (s *APIServer) GetUser(request *http.Request) (*User, error) {
 		Username:       verifyTokenResponse.Username,
 		Email:          verifyTokenResponse.Email,
 		Avatar:         verifyTokenResponse.Avatar,
+		Role:           verifyTokenResponse.Role,
 		Token:          cookie.Value,
 		TokenExpiresAt: verifyTokenResponse.ExpiresAt,
 	}, nil
@@ -214,6 +206,13 @@ func (s *APIServer) verifyJwt(jwt string) (*VerifyTokenResponse, error) {
 		"Content-Type":  "application/json",
 		"Authorization": fmt.Sprintf("Bearer %s", s.Config.BackendAPIKey),
 	}, requestBodyMap, verifyTokenResponse)
+
+	log.Printf("[API] verifyJwt response ID: %v", verifyTokenResponse.Id)
+	log.Printf("                   Username: %v", verifyTokenResponse.Username)
+	log.Printf("                      Email: %v", verifyTokenResponse.Email)
+	log.Printf("                     Avatar: %v", verifyTokenResponse.Avatar)
+	log.Printf("                       Role: %v", verifyTokenResponse.Role)
+	log.Printf("                  ExpiresAt: %v", verifyTokenResponse.ExpiresAt)
 
 	return verifyTokenResponse, err
 }

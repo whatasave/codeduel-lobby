@@ -19,9 +19,11 @@ RUN go test -v ./...
 
 
 FROM gcr.io/distroless/base-debian11 AS release-stage
-ENV ENV=production
 
+ENV BINARY_NAME=codeduel-lobby
 ENV ENV=production
+ENV HOST=0.0.0.0
+ENV PORT=80
 
 COPY --from=build-stage /usr/src/app/bin /usr/local/bin
 COPY --from=build-stage /etc/passwd /etc/passwd
