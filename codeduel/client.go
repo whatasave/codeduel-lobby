@@ -123,16 +123,20 @@ func (s *APIServer) handlePacketCheck(packet PacketInCheck, lobby *Lobby, user *
 	result, err := lobby.RunTest(user, s.Runner, packet.Language, packet.Code)
 	if err != nil {
 		stringErr := fmt.Sprintf("err while running code: %v", err)
-		return SendPacket(user.Connection, PacketOutCheckResult{Error: &stringErr, Result: result})
+		return SendPacket(user.Connection, PacketOutCheckResult{Error: &stringErr, Result: nil})
 	}
-	return SendPacket(user.Connection, PacketOutCheckResult{Result: result})
+	return SendPacket(user.Connection, PacketOutCheckResult{Result: result.Results})
 }
 
 func (s *APIServer) handlePacketSubmit(packet PacketInSubmit, lobby *Lobby, user *User) error {
 	result, err := lobby.Submit(user, s.Runner, packet.Language, packet.Code)
 	if err != nil {
 		stringErr := fmt.Sprintf("err while running code: %v", err)
-		return SendPacket(user.Connection, PacketOutSubmitResult{Error: &stringErr, Result: result})
+		return SendPacket(user.Connection, PacketOutSubmitResult{Error: &stringErr, Result: nil})
 	}
-	return SendPacket(user.Connection, PacketOutSubmitResult{Result: result})
+	err = s.Backend.RegisterSubmission(lobby, *user, result)
+	if err != nil {
+		_ = fmt.Errorf("err while registering submission: %v", err)
+	}
+	return SendPacket(user.Connection, PacketOutSubmitResult{Result: result.Results})
 }

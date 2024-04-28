@@ -22,6 +22,7 @@ func main() {
 	}
 	config := config.LoadConfig()
 	runner := codeduel.NewRunner(config.RunnerURL)
-	server := codeduel.NewAPIServer(config, lobbies, &runner)
+	backend := codeduel.NewBackend(config.BackendURL, config.BackendApiKey)
+	server := codeduel.NewApiServer(config, lobbies, &runner, &backend)
 	server.Run()
 }

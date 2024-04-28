@@ -43,17 +43,20 @@ type UserGameLobbyState struct {
 }
 
 type RunResult struct {
-	Code     string            `json:"code"`
-	Language string            `json:"language"`
-	Results  []ExecutionResult `json:"results"`
-	Date     time.Time         `json:"date"`
+	Code        string            `json:"code"`
+	Language    string            `json:"language"`
+	Results     []ExecutionResult `json:"results"`
+	PassedTests int               `json:"passedTests"`
+	Date        time.Time         `json:"date"`
 }
 
+type ChallengeId int32
 type Challenge struct {
-	Title           string     `json:"title"`
-	Description     string     `json:"description"`
-	TestCases       []TestCase `json:"testCases"`
-	HiddenTestCases []TestCase `json:"hiddenTestCases"`
+	Id              ChallengeId `json:"id"`
+	Title           string      `json:"title"`
+	Description     string      `json:"description"`
+	TestCases       []TestCase  `json:"testCases"`
+	HiddenTestCases []TestCase  `json:"hiddenTestCases"`
 }
 
 type TestCase struct {
@@ -116,7 +119,7 @@ func (lobby *Lobby) SetReadyState(user *User, state string) error {
 	}
 }
 
-func (lobby *Lobby) RunTest(user *User, runner *Runner, language string, code string) ([]ExecutionResult, error) {
+func (lobby *Lobby) RunTest(user *User, runner *Runner, language string, code string) (*RunResult, error) {
 	state, ok := lobby.State.(GameLobbyState)
 	if !ok {
 		return nil, fmt.Errorf("lobby is not in game state")
@@ -129,17 +132,21 @@ func (lobby *Lobby) RunTest(user *User, runner *Runner, language string, code st
 	if err != nil {
 		return nil, fmt.Errorf("error while running code: %v", err)
 	}
-	state.UsersState[user.Id] = UserGameLobbyState{
-		LastRunResult: &RunResult{
-			Results: result,
-			Date:    time.Now(),
-		},
-		SubmitResult: state.UsersState[user.Id].SubmitResult,
+	runResult := RunResult{
+		Code:        code,
+		Language:    language,
+		Results:     result,
+		Date:        time.Now(),
+		PassedTests: testsPassed(state.Challenge.TestCases, result),
 	}
-	return result, nil
+	state.UsersState[user.Id] = UserGameLobbyState{
+		LastRunResult: &runResult,
+		SubmitResult:  state.UsersState[user.Id].SubmitResult,
+	}
+	return &runResult, nil
 }
 
-func (lobby *Lobby) Submit(user *User, runner *Runner, language string, code string) ([]ExecutionResult, error) {
+func (lobby *Lobby) Submit(user *User, runner *Runner, language string, code string) (*RunResult, error) {
 	state, ok := lobby.State.(GameLobbyState)
 	if !ok {
 		return nil, fmt.Errorf("lobby is not in game state")
@@ -155,18 +162,32 @@ func (lobby *Lobby) Submit(user *User, runner *Runner, language string, code str
 	if err != nil {
 		return nil, fmt.Errorf("error while running code: %v", err)
 	}
+	runResult := RunResult{
+		Code:        code,
+		Language:    language,
+		Results:     result,
+		Date:        time.Now(),
+		PassedTests: testsPassed(state.Challenge.HiddenTestCases, result),
+	}
 	state.UsersState[user.Id] = UserGameLobbyState{
 		LastRunResult: state.UsersState[user.Id].LastRunResult,
-		SubmitResult: &RunResult{
-			Results: result,
-			Date:    time.Now(),
-		},
+		SubmitResult:  &runResult,
 	}
 	state.SubmitCount++
 	if state.SubmitCount == len(lobby.Users) {
 		state.context(fmt.Errorf("all users submitted"))
 	}
-	return result, nil
+	return &runResult, nil
+}
+
+func testsPassed(testCases []TestCase, results []ExecutionResult) int {
+	passed := 0
+	for i, test := range results {
+		if test.Error == "" && test.Status == 0 && test.Output == testCases[i].Output {
+			passed++
+		}
+	}
+	return passed
 }
 
 func GetStateType(state any) string {
@@ -203,6 +224,14 @@ func (s *APIServer) HandleGame(lobby *Lobby, ctx context.Context) {
 		state.StartTime,
 		state.Challenge,
 	})
+	err := s.Backend.CreateLobby(lobby)
+	if err != nil {
+		_ = fmt.Errorf("error while creating lobby: %v", err)
+	}
 	utils.WaitUntil(ctx, state.StartTime.Add(lobby.Settings.GameDuration))
 	delete(s.Lobbies, lobby.Id)
+	err = s.Backend.EndLobby(lobby)
+	if err != nil {
+		_ = fmt.Errorf("error while ending lobby: %v", err)
+	}
 }
