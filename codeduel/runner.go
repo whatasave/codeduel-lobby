@@ -51,15 +51,13 @@ func (r *Runner) AvailableLanguages() ([]string, error) {
 		return nil, fmt.Errorf(errorResult.Message)
 	}
 	var result struct {
-		Result struct {
-			Languages []string `json:"languages"`
-		} `json:"result"`
+		Languages []string `json:"result"`
 	}
 	err = json.Unmarshal(bytes, &result)
 	if err != nil {
 		return nil, err
 	}
-	return result.Result.Languages, nil
+	return result.Languages, nil
 }
 
 func (r *Runner) Run(language, code string, input []string) ([]ExecutionResult, error) {

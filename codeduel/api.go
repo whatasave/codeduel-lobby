@@ -41,6 +41,7 @@ func NewApiServer(config *config.Config, lobbies map[string]*Lobby, runner *Runn
 		Lobbies:           lobbies,
 		ReadHeaderTimeout: 3 * time.Second,
 		Runner:            runner,
+		Backend:           backend,
 	}
 }
 

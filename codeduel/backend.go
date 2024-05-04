@@ -1,6 +1,8 @@
 package codeduel
 
 import (
+	"fmt"
+
 	"github.com/xedom/codeduel-lobby/codeduel/utils"
 )
 
@@ -18,10 +20,13 @@ func NewBackend(apiBaseUrl string, apiToken string) Backend {
 
 func (backend *Backend) post(path string, body any) (any, error) {
 	var jsonResponse any
+	if backend == nil {
+		return nil, fmt.Errorf("backend is nil")
+	}
 	headers := map[string]string{
 		"x-token": backend.apiToken,
 	}
-	err := utils.HttpPost(backend.apiBaseUrl+"/"+path, headers, body, &jsonResponse)
+	err := utils.HttpPost(backend.apiBaseUrl+path, headers, body, &jsonResponse)
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +38,7 @@ func (backend *Backend) patch(path string, body any) (any, error) {
 	headers := map[string]string{
 		"x-token": backend.apiToken,
 	}
-	err := utils.HttpPatch(backend.apiBaseUrl+"/"+path, headers, body, &jsonResponse)
+	err := utils.HttpPatch(backend.apiBaseUrl+path, headers, body, &jsonResponse)
 	if err != nil {
 		return nil, err
 	}
