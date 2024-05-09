@@ -55,9 +55,9 @@ func (s *APIServer) Run() {
 	router.HandleFunc("/connect/{lobby}", s.connectLobby)
 
 	err := http.ListenAndServe(s.Addr, handlers.CORS(
-		handlers.AllowedOrigins([]string{"https://codeduel.it"}),
-		handlers.AllowedMethods([]string{"POST"}),
-		handlers.AllowedHeaders([]string{"Content-Type, x-token"}),
+		handlers.AllowedOrigins([]string{s.Config.CorsOrigin}),
+		handlers.AllowedMethods([]string{s.Config.CorsMethods}),
+		handlers.AllowedHeaders([]string{s.Config.CorsHeaders}),
 		handlers.AllowCredentials(),
 	)(router))
 

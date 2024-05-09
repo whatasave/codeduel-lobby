@@ -22,6 +22,10 @@ FROM gcr.io/distroless/base-debian11 AS release-stage
 
 ENV BINARY_NAME=codeduel-lobby
 ENV ENV=production
+ENV CORS_ORIGIN="*"
+ENV CORS_METHODS="GET,POST,PUT,PATCH,DELETE"
+ENV CORS_HEADERS="Content-Type, x-token, Accept, Content-Length, Accept-Encoding, Authorization,X-CSRF-Token"
+ENV CORS_CREDENTIALS=true
 ENV HOST=0.0.0.0
 ENV PORT=80
 
