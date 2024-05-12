@@ -18,6 +18,7 @@ type Lobby struct {
 }
 
 type Settings struct {
+	Mode             string        `json:"mode"`
 	MaxPlayers       int           `json:"maxPlayers"`
 	GameDuration     time.Duration `json:"gameDuration"`
 	AllowedLanguages []string      `json:"allowedLanguages"`

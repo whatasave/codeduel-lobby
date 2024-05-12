@@ -5,7 +5,6 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/xedom/codeduel-lobby/codeduel"
-	"github.com/xedom/codeduel-lobby/codeduel/config"
 	"github.com/xedom/codeduel-lobby/codeduel/utils"
 )
 
@@ -20,7 +19,7 @@ func main() {
 			log.Println("[MAIN] Error loading .env file")
 		}
 	}
-	config := config.LoadConfig()
+	config := utils.LoadConfig()
 	runner := codeduel.NewRunner(config.RunnerURL)
 	backend := codeduel.NewBackend(config.BackendURL, config.BackendApiKey)
 	server := codeduel.NewApiServer(config, lobbies, &runner, &backend)

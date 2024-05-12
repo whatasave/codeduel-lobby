@@ -10,12 +10,11 @@ import (
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	"github.com/xedom/codeduel-lobby/codeduel/config"
 	"github.com/xedom/codeduel-lobby/codeduel/utils"
 )
 
 type APIServer struct {
-	Config            *config.Config
+	Config            *utils.Config
 	Addr              string
 	Lobbies           map[string]*Lobby
 	ReadHeaderTimeout time.Duration
@@ -32,7 +31,7 @@ type VerifyTokenResponse struct {
 	ExpiresAt int64  `json:"expires_at"`
 }
 
-func NewApiServer(config *config.Config, lobbies map[string]*Lobby, runner *Runner, backend *Backend) *APIServer {
+func NewApiServer(config *utils.Config, lobbies map[string]*Lobby, runner *Runner, backend *Backend) *APIServer {
 	address := fmt.Sprintf("%s:%s", config.Host, config.Port)
 	log.Print("[API] Starting API server on http://", address)
 	return &APIServer{
@@ -208,13 +207,6 @@ func (s *APIServer) verifyJwt(jwt string) (*VerifyTokenResponse, error) {
 		"Content-Type":  "application/json",
 		"Authorization": fmt.Sprintf("Bearer %s", s.Config.BackendApiKey),
 	}, requestBodyMap, verifyTokenResponse)
-
-	log.Printf("[API] verifyJwt response ID: %v", verifyTokenResponse.Id)
-	log.Printf("                   Username: %v", verifyTokenResponse.Username)
-	log.Printf("                      Email: %v", verifyTokenResponse.Email)
-	log.Printf("                     Avatar: %v", verifyTokenResponse.Avatar)
-	log.Printf("                       Role: %v", verifyTokenResponse.Role)
-	log.Printf("                  ExpiresAt: %v", verifyTokenResponse.ExpiresAt)
 
 	return verifyTokenResponse, err
 }
