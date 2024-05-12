@@ -176,7 +176,7 @@ func (s *APIServer) getAllLobbies(response http.ResponseWriter, _ *http.Request)
 }
 
 func (s *APIServer) GetUser(request *http.Request) (*User, error) {
-	cookie, err := request.Cookie("jwt")
+	cookie, err := request.Cookie("access_token")
 	if err != nil {
 		return nil, errors.New("missing jwt cookie")
 	}
