@@ -198,7 +198,7 @@ func (s *APIServer) GetUser(request *http.Request) (*User, error) {
 }
 
 func (s *APIServer) verifyJwt(jwt string) (*VerifyTokenResponse, error) {
-	requestURL := fmt.Sprintf("%s/v1/validateToken", s.Config.BackendURL)
+	requestURL := fmt.Sprintf("%s/v1/auth/validate_token", s.Config.BackendURL)
 	requestBodyMap := map[string]string{"token": jwt}
 	verifyTokenResponse := &VerifyTokenResponse{}
 
