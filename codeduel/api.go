@@ -73,7 +73,6 @@ func (s *APIServer) healthCheck(response http.ResponseWriter, request *http.Requ
 
 func (s *APIServer) createLobby(response http.ResponseWriter, request *http.Request) {
 	user, err := s.GetUser(request)
-	fmt.Println("user: ", user)
 	if err != nil {
 		log.Printf("[API] error getting user: %v", err)
 		_ = RejectConnection(response, request, Unauthorized, err.Error())
