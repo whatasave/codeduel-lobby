@@ -3,6 +3,7 @@ package codeduel
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -23,12 +24,20 @@ func UnmarshalPacket(message []byte, packet *any) error {
 		typedPacket = new(PacketInSettings)
 	case "updatePlayerStatus":
 		typedPacket = new(PacketInUserStatus)
-	case "startLobby":
+	case "start":
 		typedPacket = new(PacketInStartLobby)
 	case "check":
 		typedPacket = new(PacketInCheck)
 	case "submit":
 		typedPacket = new(PacketInSubmit)
+	case "lock":
+		typedPacket = new(PacketInLock)
+	case "delete":
+		typedPacket = new(PacketInDelete)
+	case "ready":
+		typedPacket = new(PacketInReady)
+	case "kick":
+		typedPacket = new(PacketInKick)
 	default:
 		return fmt.Errorf("unknown message type: %s", packetType.Type)
 	}
@@ -53,6 +62,10 @@ func MarshalPacket(packet any) (any, error) {
 		packetType = "checkResult"
 	case PacketOutSubmitResult:
 		packetType = "submitResult"
+	case PacketOutUsersUpdate:
+		packetType = "usersUpdate"
+	case PacketOutLobbyDelete:
+		packetType = "lobbyDelete"
 	default:
 		return nil, fmt.Errorf("unknown packet: %T", packet)
 	}
@@ -91,7 +104,7 @@ func (lobby *Lobby) BroadcastPacket(packet any) []User {
 		if user.Connection != nil {
 			err := SendPacket(user.Connection, packet)
 			if err != nil {
-				fmt.Printf("error while sending packet to user %v: %v\n", user, err)
+				log.Printf("error while sending packet to user %v: %v\n", user.Username, err)
 				users = append(users, *user)
 			}
 		} else {
@@ -128,6 +141,20 @@ type PacketInSubmit struct {
 	Language string `json:"language"`
 }
 
+type PacketInLock struct {
+	Lock bool `json:"lock"`
+}
+
+type PacketInDelete struct {
+	Delete bool `json:"delete"`
+}
+type PacketInReady struct {
+	Ready bool `json:"ready"`
+}
+type PacketInKick struct {
+	UserId UserId `json:"userId"`
+}
+
 type PacketOutLobby struct {
 	LobbyID  string           `json:"id"`
 	Settings Settings         `json:"settings"`
@@ -149,4 +176,13 @@ type PacketOutCheckResult struct {
 type PacketOutSubmitResult struct {
 	Error  *string           `json:"error"`
 	Result []ExecutionResult `json:"result"`
+}
+
+type PacketOutUsersUpdate struct {
+	Users      map[UserId]*User `json:"users"`
+	ReadyUsers []UserId         `json:"readyUsers"`
+}
+
+type PacketOutLobbyDelete struct {
+	Deleted bool `json:"deleted"`
 }

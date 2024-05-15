@@ -3,6 +3,7 @@ package codeduel
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -53,11 +54,17 @@ type RunResult struct {
 
 type ChallengeId int32
 type Challenge struct {
-	Id              ChallengeId `json:"id"`
-	Title           string      `json:"title"`
-	Description     string      `json:"description"`
-	TestCases       []TestCase  `json:"testCases"`
-	HiddenTestCases []TestCase  `json:"hiddenTestCases"`
+	Id    ChallengeId `json:"id"`
+	Owner struct {
+		Id       int    `json:"id"`
+		Name     string `json:"name"`
+		Username string `json:"username"`
+		Avatar   string `json:"avatar"`
+	} `json:"owner"`
+	Title           string     `json:"title"`
+	Description     string     `json:"description"`
+	TestCases       []TestCase `json:"testCases"`
+	HiddenTestCases []TestCase `json:"hiddenTestCases"`
 }
 
 type TestCase struct {
@@ -96,8 +103,15 @@ func (lobby *Lobby) GetUser(user *User) *User {
 	return lobby.Users[user.Id]
 }
 
+func (lobby *Lobby) GetReadyUsers() []UserId {
+	if lobbyState, ok := lobby.State.(PreLobbyState); ok {
+		return lobbyState.Ready
+	}
+	return []UserId{}
+}
+
 func (lobby *Lobby) AddUser(user *User) {
-	fmt.Printf("Adding user to lobby: %v\n", user)
+	log.Printf("Adding user to lobby: %v\n", user.Username)
 	lobby.Users[user.Id] = user
 }
 
@@ -181,6 +195,15 @@ func (lobby *Lobby) Submit(user *User, runner *Runner, language string, code str
 	return &runResult, nil
 }
 
+func (lobby *Lobby) KickUser(userId UserId) error {
+	if _, ok := lobby.State.(PreLobbyState); ok {
+		delete(lobby.Users, userId)
+		return nil
+	}
+
+	return fmt.Errorf("lobby is not in PreLobby")
+}
+
 func testsPassed(testCases []TestCase, results []ExecutionResult) int {
 	passed := 0
 	for i, test := range results {
@@ -207,9 +230,15 @@ func (s *APIServer) StartLobby(lobby *Lobby, ctx context.Context) error {
 		return fmt.Errorf("lobby is not in PreLobby")
 	}
 	ctx, cancel := context.WithCancelCause(ctx)
+
+	randomChallenge, err := s.Backend.GetRandomChallenge()
+	if err != nil {
+		return fmt.Errorf("error while getting random challenge: %v", err)
+	}
+
 	lobby.State = GameLobbyState{
 		Type:        "game",
-		Challenge:   RandomChallenge(),
+		Challenge:   *randomChallenge,
 		StartTime:   time.Now(),
 		UsersState:  map[UserId]UserGameLobbyState{},
 		SubmitCount: 0,
@@ -235,4 +264,17 @@ func (s *APIServer) HandleGame(lobby *Lobby, ctx context.Context) {
 	if err != nil {
 		_ = fmt.Errorf("error while ending lobby: %v", err)
 	}
+}
+
+func (s *APIServer) DeleteLobby(lobby *Lobby, ctx context.Context) error {
+	if _, ok := lobby.State.(PreLobbyState); !ok {
+		return fmt.Errorf("lobby is not in PreLobby")
+	}
+
+	lobby.BroadcastPacket(PacketOutLobbyDelete{
+		Deleted: true,
+	})
+
+	delete(s.Lobbies, lobby.Id)
+	return nil
 }

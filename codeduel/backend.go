@@ -18,6 +18,12 @@ func NewBackend(apiBaseUrl string, apiToken string) Backend {
 	}
 }
 
+func (backend *Backend) get(path string, response interface{}) error {
+	return utils.HttpGet(backend.apiBaseUrl+path, map[string]string{
+		"x-token": backend.apiToken,
+	}, response)
+}
+
 func (backend *Backend) post(path string, body any) (any, error) {
 	var jsonResponse any
 	if backend == nil {
@@ -70,6 +76,24 @@ func (backend *Backend) RegisterSubmission(lobby *Lobby, user User, runResult *R
 func (backend *Backend) EndLobby(lobby *Lobby) error {
 	_, err := backend.patch("/v1/lobby/"+lobby.Id+"/endgame", map[string]any{})
 	return err
+}
+
+func (backend *Backend) GetChallenge(challengeId string) (*Challenge, error) {
+	challenge := &Challenge{}
+	err := backend.get("/v1/challenge/"+challengeId+"/full", challenge)
+	if err != nil {
+		return nil, err
+	}
+	return challenge, nil
+}
+
+func (backend *Backend) GetRandomChallenge() (*Challenge, error) {
+	challenge := &Challenge{}
+	err := backend.get("/v1/challenge/random/full", challenge)
+	if err != nil {
+		return nil, err
+	}
+	return challenge, nil
 }
 
 func keys[K comparable, V any](dict map[K]V) []K {

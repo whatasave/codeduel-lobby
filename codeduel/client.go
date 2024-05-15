@@ -63,6 +63,11 @@ func (s *APIServer) handleClient(connection *websocket.Conn, lobby *Lobby, user 
 		Users:    lobby.Users,
 		State:    lobby.State,
 	})
+
+	// Broadcast the updated users list
+	lobby.BroadcastPacket(PacketOutUsersUpdate{
+		Users: lobby.Users,
+	})
 	if err != nil {
 		return fmt.Errorf("error sending lobby packet: %v", err)
 
@@ -93,6 +98,14 @@ func (s *APIServer) handlePacket(packet any, lobby *Lobby, user *User) error {
 		return s.handlePacketCheck(*packet, lobby, user)
 	case *PacketInSubmit:
 		return s.handlePacketSubmit(*packet, lobby, user)
+	case *PacketInLock:
+		return s.handlePacketLock(*packet, lobby, user)
+	case *PacketInDelete:
+		return s.handlePacketDelete(*packet, lobby, user)
+	case *PacketInReady:
+		return s.handlePacketReady(*packet, lobby, user)
+	case *PacketInKick:
+		return s.handlePacketKick(*packet, lobby, user)
 	}
 	return nil
 }
@@ -139,4 +152,58 @@ func (s *APIServer) handlePacketSubmit(packet PacketInSubmit, lobby *Lobby, user
 		_ = fmt.Errorf("err while registering submission: %v", err)
 	}
 	return SendPacket(user.Connection, PacketOutSubmitResult{Result: result.Results})
+}
+
+func (s *APIServer) handlePacketLock(packet PacketInLock, lobby *Lobby, user *User) error {
+	if lobby.Owner.Id != user.Id {
+		log.Printf("user %v is not the owner of the lobby\n", user)
+		return nil
+	}
+	// TODO: implement locking of the lobby
+	// lobby.Settings.Locked = packet.Lock
+	log.Printf("TODO: lobby %v is now locked: %v\n", lobby.Id, packet.Lock)
+	return nil
+}
+
+func (s *APIServer) handlePacketDelete(packet PacketInDelete, lobby *Lobby, user *User) error {
+	if lobby.Owner.Id != user.Id {
+		log.Printf("user %v is not the owner of the lobby\n", user)
+		return nil
+	}
+	err := s.DeleteLobby(lobby, context.Background())
+	if err != nil {
+		log.Printf("error while deleting lobby: %v\n", err)
+	}
+	return nil
+}
+
+func (s *APIServer) handlePacketReady(packet PacketInReady, lobby *Lobby, user *User) error {
+	status := StatusNotReady
+	if packet.Ready {
+		status = StatusReady
+	}
+	err := lobby.SetReadyState(user, status)
+	if err != nil {
+		log.Printf("error while setting user state: %v\n", err)
+	}
+
+	lobby.BroadcastPacket(PacketOutUsersUpdate{
+		Users:      lobby.Users,
+		ReadyUsers: lobby.GetReadyUsers(),
+	})
+
+	return nil
+}
+
+func (s *APIServer) handlePacketKick(packet PacketInKick, lobby *Lobby, user *User) error {
+	err := lobby.KickUser(packet.UserId)
+	if err != nil {
+		log.Printf("error while kicking user: %v\n", err)
+	}
+
+	lobby.BroadcastPacket(PacketOutUsersUpdate{
+		Users: lobby.Users,
+	})
+
+	return nil
 }
