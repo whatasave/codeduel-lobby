@@ -90,10 +90,8 @@ func (backend *Backend) GetChallenge(challengeId string) (*Challenge, error) {
 func (backend *Backend) GetRandomChallenge() (*Challenge, error) {
 	challenge := &Challenge{}
 	err := backend.get("/v1/challenge/random/full", challenge)
-	if err != nil {
-		return nil, err
-	}
-	return challenge, nil
+
+	return challenge, err
 }
 
 func keys[K comparable, V any](dict map[K]V) []K {

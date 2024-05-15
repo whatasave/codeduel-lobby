@@ -61,10 +61,15 @@ type Challenge struct {
 		Username string `json:"username"`
 		Avatar   string `json:"avatar"`
 	} `json:"owner"`
-	Title           string     `json:"title"`
-	Description     string     `json:"description"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Content     string `json:"content"` // markdown maybe the link to the file
+
 	TestCases       []TestCase `json:"testCases"`
 	HiddenTestCases []TestCase `json:"hiddenTestCases"`
+
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
 }
 
 type TestCase struct {
@@ -232,6 +237,7 @@ func (s *APIServer) StartLobby(lobby *Lobby, ctx context.Context) error {
 	ctx, cancel := context.WithCancelCause(ctx)
 
 	randomChallenge, err := s.Backend.GetRandomChallenge()
+	log.Println("--- Random challenge: ", randomChallenge)
 	if err != nil {
 		return fmt.Errorf("error while getting random challenge: %v", err)
 	}
