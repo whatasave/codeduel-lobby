@@ -237,7 +237,6 @@ func (s *APIServer) StartLobby(lobby *Lobby, ctx context.Context) error {
 	ctx, cancel := context.WithCancelCause(ctx)
 
 	randomChallenge, err := s.Backend.GetRandomChallenge()
-	log.Println("--- Random challenge: ", randomChallenge)
 	if err != nil {
 		return fmt.Errorf("error while getting random challenge: %v", err)
 	}
