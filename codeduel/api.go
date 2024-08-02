@@ -23,12 +23,11 @@ type APIServer struct {
 }
 
 type VerifyTokenResponse struct {
-	Id        int32  `json:"id"`
-	Username  string `json:"username"`
-	Email     string `json:"email"`
-	Avatar    string `json:"avatar"`
-	Role      string `json:"role"`
-	ExpiresAt int64  `json:"expires_at"`
+	Id              int32  `json:"id"`
+	Username        string `json:"username"`
+	Name            string `json:"name"`
+	Avatar          string `json:"avatar"`
+	BackgroundImage string `json:"backgroundImage"`
 }
 
 func NewApiServer(config *utils.Config, lobbies map[string]*Lobby, runner *Runner, backend *Backend) *APIServer {
@@ -186,13 +185,12 @@ func (s *APIServer) GetUser(request *http.Request) (*User, error) {
 	}
 
 	return &User{
-		Id:             UserId(verifyTokenResponse.Id),
-		Username:       verifyTokenResponse.Username,
-		Email:          verifyTokenResponse.Email,
-		Avatar:         verifyTokenResponse.Avatar,
-		Role:           verifyTokenResponse.Role,
-		Token:          cookie.Value,
-		TokenExpiresAt: verifyTokenResponse.ExpiresAt,
+		Id:              UserId(verifyTokenResponse.Id),
+		Username:        verifyTokenResponse.Username,
+		Name:            verifyTokenResponse.Name,
+		Avatar:          verifyTokenResponse.Avatar,
+		BackgroundImage: verifyTokenResponse.BackgroundImage,
+		Token:           cookie.Value,
 	}, nil
 }
 
@@ -205,6 +203,7 @@ func (s *APIServer) verifyJwt(jwt string) (*VerifyTokenResponse, error) {
 		"Accept":        "application/json",
 		"Content-Type":  "application/json",
 		"Authorization": fmt.Sprintf("Bearer %s", s.Config.BackendApiKey),
+		"x-token":       s.Config.BackendApiKey,
 	}, requestBodyMap, verifyTokenResponse)
 
 	return verifyTokenResponse, err
