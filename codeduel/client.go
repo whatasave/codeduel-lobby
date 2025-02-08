@@ -47,7 +47,7 @@ func (s *APIServer) StartWebSocket(response http.ResponseWriter, request *http.R
 	go func() {
 		err := s.handleClient(connection, lobby, user)
 		if err != nil {
-			_ = fmt.Errorf(err.Error())
+			_ = fmt.Errorf("%v", err)
 		}
 	}()
 	return connection, nil
@@ -164,7 +164,7 @@ func (s *APIServer) handlePacketLock(packet PacketInLock, lobby *Lobby, user *Us
 	return nil
 }
 
-func (s *APIServer) handlePacketDelete(packet PacketInDelete, lobby *Lobby, user *User) error {
+func (s *APIServer) handlePacketDelete(_ PacketInDelete, lobby *Lobby, user *User) error {
 	if lobby.Owner.Id != user.Id {
 		log.Printf("user %v is not the owner of the lobby\n", user)
 		return nil
@@ -195,6 +195,11 @@ func (s *APIServer) handlePacketReady(packet PacketInReady, lobby *Lobby, user *
 }
 
 func (s *APIServer) handlePacketKick(packet PacketInKick, lobby *Lobby, user *User) error {
+	if lobby.Owner.Id == user.Id {
+		log.Printf("user %v is the owner of the lobby\n", user)
+		return nil
+	}
+
 	err := lobby.KickUser(packet.UserId)
 	if err != nil {
 		log.Printf("error while kicking user: %v\n", err)

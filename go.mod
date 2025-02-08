@@ -9,7 +9,4 @@ require (
 	github.com/gorilla/websocket v1.5.1
 )
 
-require (
-	github.com/felixge/httpsnoop v1.0.3 // indirect
-	golang.org/x/net v0.17.0 // indirect
-)
+require github.com/felixge/httpsnoop v1.0.3 // indirect

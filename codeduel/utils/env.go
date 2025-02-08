@@ -3,6 +3,8 @@ package utils
 import (
 	"log"
 	"os"
+
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -22,6 +24,13 @@ type Config struct {
 }
 
 func LoadConfig() *Config {
+	// loading env only if not in production
+	if GetEnv("ENV", "development") == "development" {
+		if err := godotenv.Load(); err != nil {
+			log.Println("[MAIN] Error loading .env file")
+		}
+	}
+
 	return &Config{
 		Host: GetEnv("HOST", "localhost"),
 		Port: GetEnv("PORT", "5010"),
