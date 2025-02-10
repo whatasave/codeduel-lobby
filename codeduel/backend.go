@@ -89,7 +89,7 @@ func (backend *Backend) GetChallenge(challengeId string) (*Challenge, error) {
 
 func (backend *Backend) GetRandomChallenge() (*Challenge, error) {
 	challenge := &Challenge{}
-	err := backend.get("/v1/challenge/random/full", challenge)
+	err := backend.get("/v1/challenge/random", challenge)
 
 	return challenge, err
 }
