@@ -52,35 +52,40 @@ func (backend *Backend) patch(path string, body any) (any, error) {
 }
 
 func (backend *Backend) CreateLobby(lobby *Lobby) error {
-	_, err := backend.post("/v1/lobby", map[string]any{
-		"lobby_id":     lobby.Id,
-		"owner_id":     lobby.Owner.Id,
-		"users_id":     keys(lobby.Users),
-		"challenge_id": lobby.State.(GameLobbyState).Challenge.Id,
-		"settings":     lobby.Settings,
+	_, err := backend.post("/v1/game", map[string]any{
+		"unique_id":         lobby.Id,
+		"owner_id":          lobby.Owner.Id,
+		"users":             keys(lobby.Users),
+		"challenge_id":      lobby.State.(GameLobbyState).Challenge.Id,
+		"mode_id":           lobby.Settings.Mode,
+		"ended":             false,
+		"max_players":       lobby.Settings.MaxPlayers,
+		"allowed_languages": lobby.Settings.AllowedLanguages,
+		"game_duration":     lobby.Settings.GameDuration,
 	})
 	return err
 }
 
 func (backend *Backend) RegisterSubmission(lobby *Lobby, user User, runResult *RunResult) error {
-	_, err := backend.patch("/v1/lobby/"+lobby.Id+"/submission", map[string]any{
+	_, err := backend.patch("/v1/game/"+lobby.Id+"/submit", map[string]any{
 		"user_id":      user.Id,
 		"code":         runResult.Code,
 		"language":     runResult.Language,
 		"date":         runResult.Date,
 		"tests_passed": runResult.PassedTests,
+		"submitted_at": runResult.Date.String(),
 	})
 	return err
 }
 
 func (backend *Backend) EndLobby(lobby *Lobby) error {
-	_, err := backend.patch("/v1/lobby/"+lobby.Id+"/endgame", map[string]any{})
+	_, err := backend.patch("/v1/game/"+lobby.Id+"/endgame", map[string]any{})
 	return err
 }
 
 func (backend *Backend) GetChallenge(challengeId string) (*Challenge, error) {
 	challenge := &Challenge{}
-	err := backend.get("/v1/challenge/"+challengeId+"/full", challenge)
+	err := backend.get("/v1/challenge/"+challengeId, challenge)
 	if err != nil {
 		return nil, err
 	}
@@ -89,8 +94,10 @@ func (backend *Backend) GetChallenge(challengeId string) (*Challenge, error) {
 
 func (backend *Backend) GetRandomChallenge() (*Challenge, error) {
 	challenge := &Challenge{}
-	err := backend.get("/v1/challenge/random/full", challenge)
-
+	err := backend.get("/v1/challenge/random", challenge)
+	if err != nil {
+		return nil, err
+	}
 	return challenge, err
 }
 
