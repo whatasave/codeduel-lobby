@@ -2,6 +2,8 @@ package codeduel
 
 import (
 	"fmt"
+	"log"
+	"strings"
 
 	"github.com/xedom/codeduel-lobby/codeduel/utils"
 )
@@ -52,28 +54,29 @@ func (backend *Backend) patch(path string, body any) (any, error) {
 }
 
 func (backend *Backend) CreateLobby(lobby *Lobby) error {
+	log.Printf("Creating lobby %v", lobby)
 	_, err := backend.post("/v1/game", map[string]any{
-		"unique_id":         lobby.Id,
-		"owner_id":          lobby.Owner.Id,
-		"users":             keys(lobby.Users),
-		"challenge_id":      lobby.State.(GameLobbyState).Challenge.Id,
-		"mode_id":           lobby.Settings.Mode,
-		"ended":             false,
-		"max_players":       lobby.Settings.MaxPlayers,
-		"allowed_languages": lobby.Settings.AllowedLanguages,
-		"game_duration":     lobby.Settings.GameDuration,
+		"uniqueId":         lobby.Id,
+		"ownerId":          lobby.Owner.Id,
+		"users":            keys(lobby.Users),
+		"challengeId":      lobby.State.(GameLobbyState).Challenge.Id,
+		"modeId":           1,
+		"ended":            false,
+		"maxPlayers":       lobby.Settings.MaxPlayers,
+		"allowedLanguages": strings.Join(lobby.Settings.AllowedLanguages, ","),
+		"gameDuration":     lobby.Settings.GameDuration,
 	})
 	return err
 }
 
 func (backend *Backend) RegisterSubmission(lobby *Lobby, user User, runResult *RunResult) error {
 	_, err := backend.patch("/v1/game/"+lobby.Id+"/submit", map[string]any{
-		"user_id":      user.Id,
-		"code":         runResult.Code,
-		"language":     runResult.Language,
-		"date":         runResult.Date,
-		"tests_passed": runResult.PassedTests,
-		"submitted_at": runResult.Date.String(),
+		"userId":      user.Id,
+		"gameId":      lobby.Id,
+		"code":        runResult.Code,
+		"language":    runResult.Language,
+		"testsPassed": runResult.PassedTests,
+		"submittedAt": runResult.Date.String(),
 	})
 	return err
 }
