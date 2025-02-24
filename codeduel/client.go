@@ -64,13 +64,12 @@ func (s *APIServer) handleClient(connection *websocket.Conn, lobby *Lobby, user 
 		State:    lobby.State,
 	})
 
-	// Broadcast the updated users list
 	lobby.BroadcastPacket(PacketOutUsersUpdate{
-		Users: lobby.Users,
+		Users:      lobby.Users,
+		ReadyUsers: lobby.GetReadyUsers(),
 	})
 	if err != nil {
 		return fmt.Errorf("error sending lobby packet: %v", err)
-
 	}
 	for {
 		var packet any
